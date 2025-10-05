@@ -1,0 +1,142 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/include/tuples.h
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/world.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/world.c.gcda
+        -:    0:Runs:1
+        -:    1:// tuples.h
+        -:    2:
+        -:    3:#ifndef TUPLES_H
+        -:    4:#define TUPLES_H
+        -:    5:
+        -:    6:#include "config.h"
+        -:    7:#include <math.h>
+        -:    8:#include <stdbool.h>
+        -:    9:#include <stddef.h>
+        -:   10:#include <stdio.h>
+        -:   11:
+        -:   12:typedef struct
+        -:   13:{
+        -:   14:    double x, y, z, w;
+        -:   15:} tuple_t;
+        -:   16:
+        -:   17:static inline tuple_t vector(const double x, const double y, const double z)
+        -:   18:{
+        -:   19:    return (tuple_t){x, y, z, 0};
+        -:   20:}
+        -:   21:
+       19:   22:static inline tuple_t point(const double x, const double y, const double z)
+        -:   23:{
+       19:   24:    return (tuple_t){x, y, z, 1};
+        -:   25:}
+        -:   26:
+        -:   27:static inline bool equal(const double a, const double b)
+        -:   28:{
+        -:   29:    return fabs(a - b) < EPSILON;
+        -:   30:}
+        -:   31:
+        -:   32:static inline bool tuple_equal(const tuple_t a, const tuple_t b)
+        -:   33:{
+        -:   34:    return equal(a.x, b.x) && equal(a.y, b.y) && equal(a.z, b.z) &&
+        -:   35:           equal(a.w, b.w);
+        -:   36:}
+        -:   37:
+      213:   38:static inline tuple_t tuple_add(const tuple_t a, const tuple_t b)
+        -:   39:{
+      213:   40:    return (tuple_t){a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+        -:   41:}
+        -:   42:
+      124:   43:static inline tuple_t tuple_subtract(const tuple_t a, const tuple_t b)
+        -:   44:{
+      124:   45:    return (tuple_t){a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+        -:   46:}
+        -:   47:
+       21:   48:static inline tuple_t tuple_negate(const tuple_t a)
+        -:   49:{
+       21:   50:    return (tuple_t){-a.x, -a.y, -a.z, -a.w};
+        -:   51:}
+        -:   52:
+      302:   53:static inline tuple_t tuple_scale(const tuple_t a, const double n)
+        -:   54:{
+      302:   55:    return (tuple_t){a.x * n, a.y * n, a.z * n, a.w * n};
+        -:   56:}
+        -:   57:
+        -:   58:static inline tuple_t tuple_scalar_divide(const tuple_t a, const double n)
+        -:   59:{
+        -:   60:    if (fabs(n) < EPSILON)
+        -:   61:    {
+        -:   62:        return (tuple_t){0.0, 0.0, 0.0, 0.0};
+        -:   63:    }
+        -:   64:    return (tuple_t){a.x / n, a.y / n, a.z / n, a.w / n};
+        -:   65:}
+        -:   66:
+      177:   67:static inline double tuple_magnitude(const tuple_t a)
+        -:   68:{
+      177:   69:    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
+        -:   70:}
+        -:   71:
+      101:   72:static inline tuple_t tuple_normalize(const tuple_t a)
+        -:   73:{
+      101:   74:    double mag = tuple_magnitude(a);
+      101:   75:    if (mag > EPSILON)
+        -:   76:    {
+      101:   77:        return tuple_scale(a, 1 / mag);
+        -:   78:    }
+    #####:   79:    return (tuple_t){0.0, 0.0, 0.0, 0.0};
+      101:   80:}
+        -:   81:
+       95:   82:static inline double tuple_dot(const tuple_t a, const tuple_t b)
+        -:   83:{
+       95:   84:    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+        -:   85:}
+        -:   86:
+        -:   87:static inline tuple_t tuple_cross(const tuple_t a, const tuple_t b)
+        -:   88:{
+        -:   89:    return (tuple_t){a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
+        -:   90:                     a.x * b.y - a.y * b.x, 0.0};
+        -:   91:}
+        -:   92:
+      200:   93:static inline tuple_t color(const double red, const double green,
+        -:   94:                            const double blue)
+        -:   95:{
+      200:   96:    return (tuple_t){.x = red, .y = green, .z = blue, .w = 0.0};
+        -:   97:}
+        -:   98:
+       25:   99:static inline tuple_t tuple_hadamard(const tuple_t a, const tuple_t b)
+        -:  100:{
+       25:  101:    return (tuple_t){a.x * b.x, a.y * b.y, a.z * b.z, 0.0};
+        -:  102:}
+        -:  103:
+       21:  104:static inline tuple_t tuple_reflect(const tuple_t in, const tuple_t normal)
+        -:  105:{
+       21:  106:    return tuple_subtract(in, tuple_scale(normal, 2 * tuple_dot(in, normal)));
+        -:  107:}
+        -:  108:
+        -:  109:static inline tuple_t hex_color(const char *hex_str)
+        -:  110:{
+        -:  111:    if (hex_str == NULL)
+        -:  112:    {
+        -:  113:        fprintf(stderr, "Warning: hex_color received NULL input.\n");
+        -:  114:        return color(0, 0, 0);
+        -:  115:    }
+        -:  116:
+        -:  117:    const char *str = hex_str;
+        -:  118:    if (*str == '#')
+        -:  119:    {
+        -:  120:        str++;
+        -:  121:    }
+        -:  122:
+        -:  123:    unsigned int r = 0, g = 0, b = 0;
+        -:  124:    if (sscanf(str, "%02x%02x%02x", &r, &g, &b) == 3)
+        -:  125:    {
+        -:  126:        double red   = r / 255.0;
+        -:  127:        double green = g / 255.0;
+        -:  128:        double blue  = b / 255.0;
+        -:  129:        return color(red, green, blue);
+        -:  130:    }
+        -:  131:    else
+        -:  132:    {
+        -:  133:        fprintf(stderr, "Warning: hex_color failed to parse '%s'.\n", hex_str);
+        -:  134:        return color(0, 0, 0);
+        -:  135:    }
+        -:  136:}
+        -:  137:
+        -:  138:#endif

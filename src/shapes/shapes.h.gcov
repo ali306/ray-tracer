@@ -1,0 +1,350 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/include/shapes.h
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/cube.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/cube.c.gcda
+        -:    0:Runs:1
+        -:    1:// shapes.h
+        -:    2:
+        -:    3:#ifndef SHAPES_H
+        -:    4:#define SHAPES_H
+        -:    5:
+        -:    6:#include "../include/intersections.h"
+        -:    7:#include "../include/lights.h"
+        -:    8:#include "../include/materials.h"
+        -:    9:#include "../include/matrices.h"
+        -:   10:#include "../include/patterns.h"
+        -:   11:#include "../include/rays.h"
+        -:   12:#include "../include/transformations.h"
+        -:   13:#include "config.h"
+        -:   14:#include <assert.h>
+        -:   15:#include <stdbool.h>
+        -:   16:
+        -:   17:typedef struct
+        -:   18:{
+        -:   19:    tuple_t min;
+        -:   20:    tuple_t max;
+        -:   21:} bounding_box_t;
+        -:   22:
+        -:   23:typedef enum
+        -:   24:{
+        -:   25:    SHAPE_TEST,
+        -:   26:    SHAPE_SPHERE,
+        -:   27:    SHAPE_PLANE,
+        -:   28:    SHAPE_CUBE,
+        -:   29:    SHAPE_CYLINDER,
+        -:   30:    SHAPE_CONE,
+        -:   31:    SHAPE_TRIANGLE,
+        -:   32:    SHAPE_SMOOTH_TRIANGLE,
+        -:   33:    SHAPE_GROUP
+        -:   34:} shape_type_t;
+        -:   35:
+        -:   36:typedef struct
+        -:   37:{
+        -:   38:    shape_type_t type;
+        -:   39:    matrix_t transform;
+        -:   40:    matrix_t inverse_transform;
+        -:   41:    matrix_t transposed_inverse_transform;
+        -:   42:    material_t material;
+        -:   43:    void *parent;
+        -:   44:    bounding_box_t world_bounds;
+        -:   45:    bool world_bounds_cached;
+        -:   46:} shape_t;
+        -:   47:
+        -:   48:typedef shape_t sphere_t;
+        -:   49:typedef shape_t plane_t;
+        -:   50:typedef shape_t cube_t;
+        -:   51:
+        -:   52:typedef struct
+        -:   53:{
+        -:   54:    shape_type_t type;
+        -:   55:    matrix_t transform;
+        -:   56:    matrix_t inverse_transform;
+        -:   57:    matrix_t transposed_inverse_transform;
+        -:   58:    material_t material;
+        -:   59:    void *parent;
+        -:   60:    bounding_box_t world_bounds;
+        -:   61:    bool world_bounds_cached;
+        -:   62:    double minimum;
+        -:   63:    double maximum;
+        -:   64:    bool closed;
+        -:   65:} cylinder_t;
+        -:   66:
+        -:   67:typedef struct
+        -:   68:{
+        -:   69:    shape_type_t type;
+        -:   70:    matrix_t transform;
+        -:   71:    matrix_t inverse_transform;
+        -:   72:    matrix_t transposed_inverse_transform;
+        -:   73:    material_t material;
+        -:   74:    void *parent;
+        -:   75:    bounding_box_t world_bounds;
+        -:   76:    bool world_bounds_cached;
+        -:   77:    double minimum;
+        -:   78:    double maximum;
+        -:   79:    bool closed;
+        -:   80:} cone_t;
+        -:   81:
+        -:   82:typedef struct
+        -:   83:{
+        -:   84:    shape_type_t type;
+        -:   85:    matrix_t transform;
+        -:   86:    matrix_t inverse_transform;
+        -:   87:    matrix_t transposed_inverse_transform;
+        -:   88:    material_t material;
+        -:   89:    void *parent;
+        -:   90:    bounding_box_t world_bounds;
+        -:   91:    bool world_bounds_cached;
+        -:   92:    ray_t saved_ray;
+        -:   93:    bool has_saved_ray;
+        -:   94:} test_shape_t;
+        -:   95:
+        -:   96:typedef struct
+        -:   97:{
+        -:   98:    shape_type_t type;
+        -:   99:    matrix_t transform;
+        -:  100:    matrix_t inverse_transform;
+        -:  101:    matrix_t transposed_inverse_transform;
+        -:  102:    material_t material;
+        -:  103:    void *parent;
+        -:  104:    bounding_box_t world_bounds;
+        -:  105:    bool world_bounds_cached;
+        -:  106:    tuple_t p1, p2, p3;
+        -:  107:    tuple_t e1, e2;
+        -:  108:    tuple_t normal;
+        -:  109:} triangle_t;
+        -:  110:
+        -:  111:typedef struct
+        -:  112:{
+        -:  113:    shape_type_t type;
+        -:  114:    matrix_t transform;
+        -:  115:    matrix_t inverse_transform;
+        -:  116:    matrix_t transposed_inverse_transform;
+        -:  117:    material_t material;
+        -:  118:    void *parent;
+        -:  119:    bounding_box_t world_bounds;
+        -:  120:    bool world_bounds_cached;
+        -:  121:    tuple_t p1, p2, p3;
+        -:  122:    tuple_t e1, e2;
+        -:  123:    tuple_t normal;
+        -:  124:    tuple_t n1, n2, n3;
+        -:  125:} smooth_triangle_t;
+        -:  126:
+        -:  127:typedef struct group_s group_t;
+        -:  128:
+        -:  129:struct group_s
+        -:  130:{
+        -:  131:    shape_type_t type;
+        -:  132:    matrix_t transform;
+        -:  133:    matrix_t inverse_transform;
+        -:  134:    matrix_t transposed_inverse_transform;
+        -:  135:    material_t material;
+        -:  136:    void *parent;
+        -:  137:    bounding_box_t world_bounds;
+        -:  138:    bool world_bounds_cached;
+        -:  139:    shape_t **children;
+        -:  140:    unsigned child_count;
+        -:  141:    unsigned children_capacity;
+        -:  142:    tuple_t cached_bounds_min;
+        -:  143:    tuple_t cached_bounds_max;
+        -:  144:    bool bounds_cached;
+        -:  145:};
+        -:  146:
+        -:  147:void shape(shape_t *shape, const shape_type_t type);
+        -:  148:void shape_set_transform(shape_t *shape, const matrix_t m);
+        -:  149:tuple_t shape_normal_at(const shape_t *shape, const tuple_t world_point,
+        -:  150:                        const intersection_t *hit);
+        -:  151:tuple_t normal_at(const void *shape, const tuple_t world_point,
+        -:  152:                  const intersection_t *hit);
+        -:  153:intersections_t shape_intersect(const shape_t *shape, const ray_t r);
+        -:  154:
+        -:  155:sphere_t sphere(void);
+        -:  156:sphere_t glass_sphere(void);
+        -:  157:void sphere_set_transform(sphere_t *s, matrix_t m);
+        -:  158:intersections_t sphere_intersect(const sphere_t *s, const ray_t r);
+        -:  159:
+        -:  160:plane_t plane(void);
+        -:  161:
+        -:  162:static inline intersections_t plane_intersect(const plane_t *p, ray_t r)
+        -:  163:{
+        -:  164:    if (p == NULL)
+        -:  165:    {
+        -:  166:        return empty_intersections();
+        -:  167:    }
+        -:  168:
+        -:  169:    if (fabs(r.direction.y) < EPSILON)
+        -:  170:    {
+        -:  171:        return empty_intersections();
+        -:  172:    }
+        -:  173:
+        -:  174:    double t = -r.origin.y / r.direction.y;
+        -:  175:
+        -:  176:    return (intersections_t){.count         = 1,
+        -:  177:                             .intersections = {intersection(t, (void *)p)}};
+        -:  178:}
+        -:  179:
+        -:  180:tuple_t pattern_at_shape(pattern_t pattern, shape_t object,
+        -:  181:                         tuple_t world_point);
+        -:  182:static inline tuple_t materials_lighting(const material_t *m, const shape_t *o,
+        -:  183:                                         const light_t *l, const tuple_t p,
+        -:  184:                                         const tuple_t eyev,
+        -:  185:                                         const tuple_t normalv,
+        -:  186:                                         const double intensity)
+        -:  187:{
+        -:  188:    if (m == NULL || o == NULL || l == NULL)
+        -:  189:    {
+        -:  190:        return color(0, 0, 0);
+        -:  191:    }
+        -:  192:
+        -:  193:    tuple_t c;
+        -:  194:
+        -:  195:    if (m->has_pattern)
+        -:  196:    {
+        -:  197:        c = pattern_at_shape(m->pattern, *o, p);
+        -:  198:    }
+        -:  199:    else
+        -:  200:    {
+        -:  201:        c = m->color;
+        -:  202:    }
+        -:  203:
+        -:  204:    tuple_t effective_color = tuple_hadamard(c, l->intensity);
+        -:  205:    tuple_t ambient         = tuple_scale(effective_color, m->ambient);
+        -:  206:
+        -:  207:    tuple_t sum = color(0, 0, 0);
+        -:  208:
+        -:  209:    if (l->type == LIGHT_POINT)
+        -:  210:    {
+        -:  211:        tuple_t light_vector    = tuple_subtract(l->position, p);
+        -:  212:        tuple_t lightv          = tuple_normalize(light_vector);
+        -:  213:        double light_dot_normal = tuple_dot(lightv, normalv);
+        -:  214:
+        -:  215:        if (light_dot_normal > 0)
+        -:  216:        {
+        -:  217:            tuple_t diffuse =
+        -:  218:                tuple_scale(effective_color, m->diffuse * light_dot_normal);
+        -:  219:            sum = tuple_add(sum, diffuse);
+        -:  220:
+        -:  221:            tuple_t reflectv = tuple_reflect(tuple_negate(lightv), normalv);
+        -:  222:            double reflect_dot_eye = tuple_dot(reflectv, eyev);
+        -:  223:
+        -:  224:            if (reflect_dot_eye > 0)
+        -:  225:            {
+        -:  226:                double factor = pow(reflect_dot_eye, m->shininess);
+        -:  227:                tuple_t specular =
+        -:  228:                    tuple_scale(l->intensity, m->specular * factor);
+        -:  229:                sum = tuple_add(sum, specular);
+        -:  230:            }
+        -:  231:        }
+        -:  232:    }
+        -:  233:    else if (l->type == LIGHT_AREA)
+        -:  234:    {
+        -:  235:        for (int v = 0; v < l->vsteps; v++)
+        -:  236:        {
+        -:  237:            for (int u = 0; u < l->usteps; u++)
+        -:  238:            {
+        -:  239:                tuple_t light_position =
+        -:  240:                    lights_point_on_light((light_t *)l, u, v);
+        -:  241:                tuple_t light_vector    = tuple_subtract(light_position, p);
+        -:  242:                tuple_t lightv          = tuple_normalize(light_vector);
+        -:  243:                double light_dot_normal = tuple_dot(lightv, normalv);
+        -:  244:
+        -:  245:                if (light_dot_normal > 0)
+        -:  246:                {
+        -:  247:                    tuple_t diffuse = tuple_scale(
+        -:  248:                        effective_color, m->diffuse * light_dot_normal);
+        -:  249:                    sum = tuple_add(sum, diffuse);
+        -:  250:
+        -:  251:                    tuple_t reflectv =
+        -:  252:                        tuple_reflect(tuple_negate(lightv), normalv);
+        -:  253:                    double reflect_dot_eye = tuple_dot(reflectv, eyev);
+        -:  254:
+        -:  255:                    if (reflect_dot_eye > 0)
+        -:  256:                    {
+        -:  257:                        double factor = pow(reflect_dot_eye, m->shininess);
+        -:  258:                        tuple_t specular =
+        -:  259:                            tuple_scale(l->intensity, m->specular * factor);
+        -:  260:                        sum = tuple_add(sum, specular);
+        -:  261:                    }
+        -:  262:                }
+        -:  263:            }
+        -:  264:        }
+        -:  265:        sum = tuple_scale(sum, 1.0 / l->samples);
+        -:  266:    }
+        -:  267:
+        -:  268:    sum = tuple_scale(sum, intensity);
+        -:  269:
+        -:  270:    return tuple_add(ambient, sum);
+        -:  271:}
+        -:  272:
+        -:  273:cube_t cube(void);
+        -:  274:
+        -:  275:cylinder_t cylinder(void);
+        -:  276:intersections_t cylinder_intersect(const cylinder_t *c, ray_t r);
+        -:  277:
+        -:  278:cone_t cone(void);
+        -:  279:intersections_t cone_intersect(const cone_t *c, ray_t r);
+        -:  280:
+        -:  281:triangle_t triangle(tuple_t p1, tuple_t p2, tuple_t p3);
+        -:  282:intersections_t triangle_intersect(const triangle_t *t, ray_t r);
+        -:  283:
+        -:  284:smooth_triangle_t smooth_triangle(tuple_t p1, tuple_t p2, tuple_t p3,
+        -:  285:                                  tuple_t n1, tuple_t n2, tuple_t n3);
+        -:  286:intersections_t smooth_triangle_intersect(const smooth_triangle_t *t, ray_t r);
+        -:  287:
+        -:  288:group_t *group(void);
+        -:  289:void group_free(group_t *g);
+        -:  290:void group_add_child(group_t *g, shape_t *s);
+        -:  291:bool group_includes(const group_t *g, const shape_t *s);
+        -:  292:intersections_t group_intersect(const group_t *g, ray_t r);
+        -:  293:intersections_t group_local_intersect(const group_t *g, ray_t r);
+        -:  294:
+        -:  295:tuple_t world_to_object(const shape_t *shape, tuple_t point);
+        -:  296:tuple_t normal_to_world(const shape_t *shape, tuple_t normal);
+        -:  297:
+        -:  298:typedef struct
+        -:  299:{
+        -:  300:    shape_t **shapes;
+        -:  301:    unsigned count;
+        -:  302:    unsigned capacity;
+        -:  303:} shape_list_t;
+        -:  304:
+        -:  305:shape_list_t shape_list_create(void);
+        -:  306:void shape_list_free(shape_list_t *list);
+        -:  307:void shape_list_add(shape_list_t *list, shape_t *shape);
+        -:  308:void partition_children(group_t *group, shape_list_t *left,
+        -:  309:                        shape_list_t *right);
+        -:  310:void make_subgroup(group_t *parent_group, shape_list_t *children);
+        -:  311:void divide(shape_t *shape, unsigned threshold);
+        -:  312:void divide_recursive(shape_t *shape, unsigned threshold, unsigned max_depth);
+        -:  313:
+        -:  314:#define group_is_empty(g) ((g)->child_count == 0)
+        -:  315:
+       21:  316:static inline void check_axis(const double origin, const double direction,
+        -:  317:                              double *tmin, double *tmax)
+        -:  318:{
+       21:  319:    double tmin_numerator = (-1 - origin);
+       21:  320:    double tmax_numerator = (1 - origin);
+        -:  321:
+       21:  322:    if (fabs(direction) >= EPSILON)
+        -:  323:    {
+        7:  324:        *tmin = tmin_numerator / direction;
+        7:  325:        *tmax = tmax_numerator / direction;
+        7:  326:    }
+        -:  327:    else
+        -:  328:    {
+       14:  329:        *tmin = tmin_numerator > 0 ? 1e6 : -1e6;
+       14:  330:        *tmax = tmax_numerator > 0 ? 1e6 : -1e6;
+        -:  331:    }
+        -:  332:
+       21:  333:    if (*tmin > *tmax)
+        -:  334:    {
+        3:  335:        double temp = *tmin;
+        3:  336:        *tmin       = *tmax;
+        3:  337:        *tmax       = temp;
+        3:  338:    }
+       21:  339:}
+        -:  340:
+        -:  341:intersections_t cube_intersect(const cube_t *c, ray_t r);
+        -:  342:
+        -:  343:test_shape_t test_shape(void);
+        -:  344:intersections_t test_shape_intersect(test_shape_t *t, ray_t r);
+        -:  345:
+        -:  346:#endif

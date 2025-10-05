@@ -1,0 +1,21 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/materials.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/materials.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/materials.c.gcda
+        -:    0:Runs:1
+        -:    1:// material.c
+        -:    2:
+        -:    3:#include "../include/materials.h"
+        -:    4:
+      254:    5:material_t material(void)
+        -:    6:{
+      254:    7:    return (material_t){.color            = color(1, 1, 1),
+        -:    8:                        .ambient          = 0.1,
+        -:    9:                        .diffuse          = 0.9,
+        -:   10:                        .specular         = 0.9,
+        -:   11:                        .shininess        = 200.0,
+        -:   12:                        .reflective       = 0.0,
+        -:   13:                        .transparency     = 0.0,
+        -:   14:                        .refractive_index = 1.0,
+        -:   15:                        .has_pattern      = false,
+        -:   16:                        .casts_shadow     = true};
+        -:   17:}

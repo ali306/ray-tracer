@@ -1,0 +1,107 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/lights.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/lights.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/lights.c.gcda
+        -:    0:Runs:1
+        -:    1:// lights.c
+        -:    2:
+        -:    3:#include "../include/lights.h"
+        -:    4:#include "../include/sequences.h"
+        -:    5:#include "../include/world.h"
+        -:    6:
+       31:    7:light_t lights_point_light(const tuple_t position, const tuple_t intensity)
+        -:    8:{
+       31:    9:    sequence_t default_jitter = sequence_new();
+       31:   10:    sequence_add(&default_jitter, 0.5);
+        -:   11:
+      155:   12:    return (light_t){.intensity = intensity,
+       31:   13:                     .position  = position,
+        -:   14:                     .type      = LIGHT_POINT,
+       31:   15:                     .corner    = point(0, 0, 0),
+       31:   16:                     .uvec      = vector(0, 0, 0),
+       31:   17:                     .vvec      = vector(0, 0, 0),
+        -:   18:                     .usteps    = 1,
+        -:   19:                     .vsteps    = 1,
+        -:   20:                     .samples   = 1,
+       31:   21:                     .jitter_by = default_jitter};
+       31:   22:}
+        -:   23:
+        7:   24:light_t lights_area_light(const tuple_t corner, const tuple_t full_uvec,
+        -:   25:                          const int usteps, const tuple_t full_vvec,
+        -:   26:                          const int vsteps, const tuple_t intensity)
+        -:   27:{
+        7:   28:    tuple_t uvec = tuple_scale(full_uvec, 1.0 / usteps);
+        7:   29:    tuple_t vvec = tuple_scale(full_vvec, 1.0 / vsteps);
+        7:   30:    int samples  = usteps * vsteps;
+        -:   31:
+        7:   32:    tuple_t half_uvec = tuple_scale(full_uvec, 0.5);
+        7:   33:    tuple_t half_vvec = tuple_scale(full_vvec, 0.5);
+        7:   34:    tuple_t position  = tuple_add(tuple_add(corner, half_uvec), half_vvec);
+        -:   35:
+        7:   36:    sequence_t default_jitter = sequence_new();
+        7:   37:    sequence_add(&default_jitter, 0.5);
+        -:   38:
+       56:   39:    return (light_t){.intensity = intensity,
+        7:   40:                     .position  = position,
+        -:   41:                     .type      = LIGHT_AREA,
+        7:   42:                     .corner    = corner,
+        7:   43:                     .uvec      = uvec,
+        7:   44:                     .vvec      = vvec,
+        7:   45:                     .usteps    = usteps,
+        7:   46:                     .vsteps    = vsteps,
+        7:   47:                     .samples   = samples,
+        7:   48:                     .jitter_by = default_jitter};
+        7:   49:}
+        -:   50:
+       58:   51:tuple_t lights_point_on_light(const light_t *light, const int u, const int v)
+        -:   52:{
+       58:   53:    if (light == NULL)
+        -:   54:    {
+    #####:   55:        return point(0, 0, 0);
+        -:   56:    }
+        -:   57:
+       58:   58:    int sample_index = v * light->usteps + u;
+       58:   59:    double u_jitter  = sequence_at(&light->jitter_by, sample_index * 2);
+       58:   60:    double v_jitter  = sequence_at(&light->jitter_by, sample_index * 2 + 1);
+        -:   61:
+       58:   62:    tuple_t u_offset = tuple_scale(light->uvec, u + u_jitter);
+       58:   63:    tuple_t v_offset = tuple_scale(light->vvec, v + v_jitter);
+       58:   64:    return tuple_add(tuple_add(light->corner, u_offset), v_offset);
+       58:   65:}
+        -:   66:
+       42:   67:double lights_intensity_at(const light_t *light, const tuple_t point,
+        -:   68:                           const world_t *world)
+        -:   69:{
+       42:   70:    if (light == NULL || world == NULL)
+        -:   71:    {
+    #####:   72:        return 0.0;
+        -:   73:    }
+        -:   74:
+       42:   75:    if (light->type == LIGHT_POINT)
+        -:   76:    {
+       32:   77:        if (world_is_shadowed(world, light->position, point))
+        -:   78:        {
+       10:   79:            return 0.0;
+        -:   80:        }
+       22:   81:        return 1.0;
+        -:   82:    }
+       10:   83:    else if (light->type == LIGHT_AREA)
+        -:   84:    {
+       10:   85:        double total = 0.0;
+        -:   86:
+       30:   87:        for (int v = 0; v < light->vsteps; v++)
+        -:   88:        {
+       60:   89:            for (int u = 0; u < light->usteps; u++)
+        -:   90:            {
+       40:   91:                tuple_t light_position = lights_point_on_light(light, u, v);
+       40:   92:                if (!world_is_shadowed(world, light_position, point))
+        -:   93:                {
+       22:   94:                    total += 1.0;
+       22:   95:                }
+       40:   96:            }
+       20:   97:        }
+        -:   98:
+       10:   99:        return total / light->samples;
+       10:  100:    }
+        -:  101:
+    #####:  102:    return 0.0;
+       42:  103:}

@@ -1,0 +1,72 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/sphere.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/sphere.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/sphere.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/shapes.h"
+        -:    2:#include <math.h>
+        -:    3:#include <stdio.h>
+        -:    4:#include <stdlib.h>
+        -:    5:
+      110:    6:sphere_t sphere(void)
+        -:    7:{
+        -:    8:    sphere_t s;
+      110:    9:    shape(&s, SHAPE_SPHERE);
+      110:   10:    return s;
+        -:   11:}
+        -:   12:
+      126:   13:intersections_t sphere_intersect(const sphere_t *s, const ray_t r)
+        -:   14:{
+      126:   15:    if (s == NULL)
+        -:   16:    {
+    #####:   17:        return empty_intersections();
+        -:   18:    }
+        -:   19:
+      126:   20:    tuple_t sphere_to_ray = tuple_subtract(r.origin, point(0, 0, 0));
+        -:   21:
+      126:   22:    double a = tuple_dot(r.direction, r.direction);
+        -:   23:
+      126:   24:    double b = 2.0 * tuple_dot(r.direction, sphere_to_ray);
+      126:   25:    double c = tuple_dot(sphere_to_ray, sphere_to_ray) - 1.0;
+        -:   26:
+      126:   27:    if (fabs(a) < EPSILON)
+        -:   28:    {
+    #####:   29:        return empty_intersections();
+        -:   30:    }
+        -:   31:
+      126:   32:    double discriminant = b * b - 4.0 * a * c;
+        -:   33:
+      126:   34:    if (discriminant < 0.0)
+        -:   35:    {
+       23:   36:        return empty_intersections();
+        -:   37:    }
+        -:   38:
+      103:   39:    double sqrt_d = sqrt(discriminant);
+      103:   40:    double inv_2a = 0.5 / a;
+        -:   41:
+      103:   42:    double t1 = (-b - sqrt_d) * inv_2a;
+      103:   43:    double t2 = (-b + sqrt_d) * inv_2a;
+        -:   44:
+        -:   45:    intersections_t result;
+      103:   46:    result.count            = 2;
+      103:   47:    result.intersections[0] = intersection(t1, (void *)s);
+      103:   48:    result.intersections[1] = intersection(t2, (void *)s);
+        -:   49:    return result;
+      126:   50:}
+        -:   51:
+       12:   52:void sphere_set_transform(sphere_t *s, matrix_t m)
+        -:   53:{
+       12:   54:    if (s == NULL)
+        -:   55:    {
+    #####:   56:        return;
+        -:   57:    }
+       12:   58:    shape_set_transform((shape_t *)s, m);
+       12:   59:}
+        -:   60:
+        7:   61:sphere_t glass_sphere(void)
+        -:   62:{
+        7:   63:    sphere_t s                  = sphere();
+        7:   64:    s.material.transparency     = 1.0;
+        7:   65:    s.material.refractive_index = 1.5;
+        -:   66:
+        7:   67:    return s;
+        -:   68:}

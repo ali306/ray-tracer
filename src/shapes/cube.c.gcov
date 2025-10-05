@@ -1,0 +1,44 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/cube.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/cube.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/cube.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/shapes.h"
+        -:    2:#include <math.h>
+        -:    3:
+        -:    4:#define MAX(a, b) ((a) > (b) ? (a) : (b))
+        -:    5:#define MIN(a, b) ((a) > (b) ? (b) : (a))
+        -:    6:
+       19:    7:cube_t cube(void)
+        -:    8:{
+        -:    9:    cube_t c;
+       19:   10:    shape(&c, SHAPE_CUBE);
+       19:   11:    return c;
+        -:   12:}
+        -:   13:
+        7:   14:intersections_t cube_intersect(const cube_t *c, ray_t r)
+        -:   15:{
+        7:   16:    if (c == NULL)
+        -:   17:    {
+    #####:   18:        return empty_intersections();
+        -:   19:    }
+        -:   20:
+        7:   21:    double xtmin, xtmax, ytmin, ytmax, ztmin, ztmax;
+        -:   22:
+        7:   23:    check_axis(r.origin.x, r.direction.x, &xtmin, &xtmax);
+        7:   24:    check_axis(r.origin.y, r.direction.y, &ytmin, &ytmax);
+        7:   25:    check_axis(r.origin.z, r.direction.z, &ztmin, &ztmax);
+        -:   26:
+        7:   27:    double tmin = MAX(MAX(xtmin, ytmin), ztmin);
+        7:   28:    double tmax = MIN(MIN(xtmax, ytmax), ztmax);
+        -:   29:
+        7:   30:    if (tmin > tmax)
+        -:   31:    {
+    #####:   32:        return empty_intersections();
+        -:   33:    }
+        -:   34:
+        -:   35:    intersections_t result;
+        7:   36:    result.count            = 2;
+        7:   37:    result.intersections[0] = intersection(tmin, (void *)c);
+        7:   38:    result.intersections[1] = intersection(tmax, (void *)c);
+        7:   39:    return result;
+        7:   40:}

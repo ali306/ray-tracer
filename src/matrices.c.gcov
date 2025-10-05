@@ -1,0 +1,193 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/matrices.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/matrices.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/matrices.c.gcda
+        -:    0:Runs:1
+        -:    1:// matrices.c
+        -:    2:
+        -:    3:#include "../include/matrices.h"
+        -:    4:
+        -:    5:const matrix_t IDENTITY = {
+        -:    6:    .m = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}};
+        -:    7:
+       65:    8:matrix_t matrix_transpose(const matrix_t a)
+        -:    9:{
+        -:   10:    matrix_t output;
+        -:   11:
+       65:   12:    output.m[0] = a.m[0];
+       65:   13:    output.m[1] = a.m[4];
+       65:   14:    output.m[2] = a.m[8];
+       65:   15:    output.m[3] = a.m[12];
+        -:   16:
+       65:   17:    output.m[4] = a.m[1];
+       65:   18:    output.m[5] = a.m[5];
+       65:   19:    output.m[6] = a.m[9];
+       65:   20:    output.m[7] = a.m[13];
+        -:   21:
+       65:   22:    output.m[8]  = a.m[2];
+       65:   23:    output.m[9]  = a.m[6];
+       65:   24:    output.m[10] = a.m[10];
+       65:   25:    output.m[11] = a.m[14];
+        -:   26:
+       65:   27:    output.m[12] = a.m[3];
+       65:   28:    output.m[13] = a.m[7];
+       65:   29:    output.m[14] = a.m[11];
+       65:   30:    output.m[15] = a.m[15];
+        -:   31:
+       65:   32:    return output;
+        -:   33:}
+        -:   34:
+        4:   35:double matrix_determinant(const matrix_t a)
+        -:   36:{
+       12:   37:    double m0 = a.m[5] * (a.m[10] * a.m[15] - a.m[11] * a.m[14]) -
+        8:   38:                a.m[6] * (a.m[9] * a.m[15] - a.m[11] * a.m[13]) +
+        4:   39:                a.m[7] * (a.m[9] * a.m[14] - a.m[10] * a.m[13]);
+        -:   40:
+       12:   41:    double m1 = a.m[4] * (a.m[10] * a.m[15] - a.m[11] * a.m[14]) -
+        8:   42:                a.m[6] * (a.m[8] * a.m[15] - a.m[11] * a.m[12]) +
+        4:   43:                a.m[7] * (a.m[8] * a.m[14] - a.m[10] * a.m[12]);
+        -:   44:
+       12:   45:    double m2 = a.m[4] * (a.m[9] * a.m[15] - a.m[11] * a.m[13]) -
+        8:   46:                a.m[5] * (a.m[8] * a.m[15] - a.m[11] * a.m[12]) +
+        4:   47:                a.m[7] * (a.m[8] * a.m[13] - a.m[9] * a.m[12]);
+        -:   48:
+       12:   49:    double m3 = a.m[4] * (a.m[9] * a.m[14] - a.m[10] * a.m[13]) -
+        8:   50:                a.m[5] * (a.m[8] * a.m[14] - a.m[10] * a.m[12]) +
+        4:   51:                a.m[6] * (a.m[8] * a.m[13] - a.m[9] * a.m[12]);
+        -:   52:
+        8:   53:    return a.m[0] * m0 - a.m[1] * m1 + a.m[2] * m2 - a.m[3] * m3;
+        4:   54:}
+        -:   55:
+        2:   56:bool matrix_invertible(const matrix_t a)
+        -:   57:{
+        2:   58:    return !equal(matrix_determinant(a), 0);
+        -:   59:}
+        -:   60:
+       75:   61:matrix_t matrix_inverse(const matrix_t a)
+        -:   62:{
+       75:   63:    matrix_t output;
+        -:   64:
+        -:   65:    // Calculate temporary values for the first two rows of cofactors
+       75:   66:    const double a00 = a.m[0], a01 = a.m[1], a02 = a.m[2], a03 = a.m[3];
+       75:   67:    const double a10 = a.m[4], a11 = a.m[5], a12 = a.m[6], a13 = a.m[7];
+       75:   68:    const double a20 = a.m[8], a21 = a.m[9], a22 = a.m[10], a23 = a.m[11];
+       75:   69:    const double a30 = a.m[12], a31 = a.m[13], a32 = a.m[14], a33 = a.m[15];
+        -:   70:
+        -:   71:    // Calculate cofactors
+      225:   72:    const double b00 = a11 * (a22 * a33 - a23 * a32) -
+      150:   73:                       a12 * (a21 * a33 - a23 * a31) +
+       75:   74:                       a13 * (a21 * a32 - a22 * a31);
+      225:   75:    const double b01 = a10 * (a22 * a33 - a23 * a32) -
+      150:   76:                       a12 * (a20 * a33 - a23 * a30) +
+       75:   77:                       a13 * (a20 * a32 - a22 * a30);
+      225:   78:    const double b02 = a10 * (a21 * a33 - a23 * a31) -
+      150:   79:                       a11 * (a20 * a33 - a23 * a30) +
+       75:   80:                       a13 * (a20 * a31 - a21 * a30);
+      225:   81:    const double b03 = a10 * (a21 * a32 - a22 * a31) -
+      150:   82:                       a11 * (a20 * a32 - a22 * a30) +
+       75:   83:                       a12 * (a20 * a31 - a21 * a30);
+        -:   84:
+       75:   85:    const double det = a00 * b00 - a01 * b01 + a02 * b02 - a03 * b03;
+        -:   86:
+       75:   87:    if (equal(det, 0.0))
+        -:   88:    {
+    #####:   89:        return IDENTITY;
+        -:   90:    }
+        -:   91:
+       75:   92:    const double inv_det = 1.0 / det;
+        -:   93:
+      225:   94:    const double b10 = a01 * (a22 * a33 - a23 * a32) -
+      150:   95:                       a02 * (a21 * a33 - a23 * a31) +
+       75:   96:                       a03 * (a21 * a32 - a22 * a31);
+      225:   97:    const double b11 = a00 * (a22 * a33 - a23 * a32) -
+      150:   98:                       a02 * (a20 * a33 - a23 * a30) +
+       75:   99:                       a03 * (a20 * a32 - a22 * a30);
+      225:  100:    const double b12 = a00 * (a21 * a33 - a23 * a31) -
+      150:  101:                       a01 * (a20 * a33 - a23 * a30) +
+       75:  102:                       a03 * (a20 * a31 - a21 * a30);
+      225:  103:    const double b13 = a00 * (a21 * a32 - a22 * a31) -
+      150:  104:                       a01 * (a20 * a32 - a22 * a30) +
+       75:  105:                       a02 * (a20 * a31 - a21 * a30);
+        -:  106:
+      225:  107:    const double b20 = a01 * (a12 * a33 - a13 * a32) -
+      150:  108:                       a02 * (a11 * a33 - a13 * a31) +
+       75:  109:                       a03 * (a11 * a32 - a12 * a31);
+      225:  110:    const double b21 = a00 * (a12 * a33 - a13 * a32) -
+      150:  111:                       a02 * (a10 * a33 - a13 * a30) +
+       75:  112:                       a03 * (a10 * a32 - a12 * a30);
+      225:  113:    const double b22 = a00 * (a11 * a33 - a13 * a31) -
+      150:  114:                       a01 * (a10 * a33 - a13 * a30) +
+       75:  115:                       a03 * (a10 * a31 - a11 * a30);
+      225:  116:    const double b23 = a00 * (a11 * a32 - a12 * a31) -
+      150:  117:                       a01 * (a10 * a32 - a12 * a30) +
+       75:  118:                       a02 * (a10 * a31 - a11 * a30);
+        -:  119:
+      225:  120:    const double b30 = a01 * (a12 * a23 - a13 * a22) -
+      150:  121:                       a02 * (a11 * a23 - a13 * a21) +
+       75:  122:                       a03 * (a11 * a22 - a12 * a21);
+      225:  123:    const double b31 = a00 * (a12 * a23 - a13 * a22) -
+      150:  124:                       a02 * (a10 * a23 - a13 * a20) +
+       75:  125:                       a03 * (a10 * a22 - a12 * a20);
+      225:  126:    const double b32 = a00 * (a11 * a23 - a13 * a21) -
+      150:  127:                       a01 * (a10 * a23 - a13 * a20) +
+       75:  128:                       a03 * (a10 * a21 - a11 * a20);
+      225:  129:    const double b33 = a00 * (a11 * a22 - a12 * a21) -
+      150:  130:                       a01 * (a10 * a22 - a12 * a20) +
+       75:  131:                       a02 * (a10 * a21 - a11 * a20);
+        -:  132:
+       75:  133:    output.m[0]  = b00 * inv_det;
+       75:  134:    output.m[1]  = -b10 * inv_det;
+       75:  135:    output.m[2]  = b20 * inv_det;
+       75:  136:    output.m[3]  = -b30 * inv_det;
+       75:  137:    output.m[4]  = -b01 * inv_det;
+       75:  138:    output.m[5]  = b11 * inv_det;
+       75:  139:    output.m[6]  = -b21 * inv_det;
+       75:  140:    output.m[7]  = b31 * inv_det;
+       75:  141:    output.m[8]  = b02 * inv_det;
+       75:  142:    output.m[9]  = -b12 * inv_det;
+       75:  143:    output.m[10] = b22 * inv_det;
+       75:  144:    output.m[11] = -b32 * inv_det;
+       75:  145:    output.m[12] = -b03 * inv_det;
+       75:  146:    output.m[13] = b13 * inv_det;
+       75:  147:    output.m[14] = -b23 * inv_det;
+       75:  148:    output.m[15] = b33 * inv_det;
+        -:  149:
+       75:  150:    return output;
+       75:  151:}
+        -:  152:
+       22:  153:bool matrix_equal(matrix_t a, matrix_t b)
+        -:  154:{
+       22:  155:    if (!equal(a.m[0], b.m[0]))
+        1:  156:        return false;
+       21:  157:    if (!equal(a.m[1], b.m[1]))
+    #####:  158:        return false;
+       21:  159:    if (!equal(a.m[2], b.m[2]))
+    #####:  160:        return false;
+       21:  161:    if (!equal(a.m[3], b.m[3]))
+    #####:  162:        return false;
+       21:  163:    if (!equal(a.m[4], b.m[4]))
+    #####:  164:        return false;
+       21:  165:    if (!equal(a.m[5], b.m[5]))
+    #####:  166:        return false;
+       21:  167:    if (!equal(a.m[6], b.m[6]))
+    #####:  168:        return false;
+       21:  169:    if (!equal(a.m[7], b.m[7]))
+    #####:  170:        return false;
+       21:  171:    if (!equal(a.m[8], b.m[8]))
+    #####:  172:        return false;
+       21:  173:    if (!equal(a.m[9], b.m[9]))
+    #####:  174:        return false;
+       21:  175:    if (!equal(a.m[10], b.m[10]))
+    #####:  176:        return false;
+       21:  177:    if (!equal(a.m[11], b.m[11]))
+    #####:  178:        return false;
+       21:  179:    if (!equal(a.m[12], b.m[12]))
+    #####:  180:        return false;
+       21:  181:    if (!equal(a.m[13], b.m[13]))
+    #####:  182:        return false;
+       21:  183:    if (!equal(a.m[14], b.m[14]))
+    #####:  184:        return false;
+       21:  185:    if (!equal(a.m[15], b.m[15]))
+    #####:  186:        return false;
+        -:  187:
+       21:  188:    return true;
+       22:  189:}

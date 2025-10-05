@@ -1,0 +1,132 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/transformations.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/transformations.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/transformations.c.gcda
+        -:    0:Runs:1
+        -:    1:// transformations.c
+        -:    2:
+        -:    3:#include "../include/transformations.h"
+        -:    4:#include <math.h>
+        -:    5:
+       46:    6:matrix_t transform_translation(const double x, const double y, const double z)
+        -:    7:{
+       46:    8:    matrix_t t = IDENTITY;
+        -:    9:
+       46:   10:    t.m[3]  = x;
+       46:   11:    t.m[7]  = y;
+       46:   12:    t.m[11] = z;
+        -:   13:
+       46:   14:    return t;
+        -:   15:}
+        -:   16:
+       42:   17:matrix_t transform_scaling(const double x, const double y, const double z)
+        -:   18:{
+       42:   19:    matrix_t s = IDENTITY;
+        -:   20:
+       42:   21:    s.m[0]  = x;
+       42:   22:    s.m[5]  = y;
+       42:   23:    s.m[10] = z;
+        -:   24:
+       42:   25:    return s;
+        -:   26:}
+        -:   27:
+        6:   28:matrix_t transform_rotation_x(const double radians)
+        -:   29:{
+        6:   30:    matrix_t r = IDENTITY;
+        -:   31:
+        6:   32:    r.m[5]  = cos(radians);
+        6:   33:    r.m[6]  = -sin(radians);
+        6:   34:    r.m[9]  = sin(radians);
+        6:   35:    r.m[10] = cos(radians);
+        -:   36:
+        6:   37:    return r;
+        -:   38:}
+        -:   39:
+        7:   40:matrix_t transform_rotation_y(const double radians)
+        -:   41:{
+        7:   42:    matrix_t r = IDENTITY;
+        -:   43:
+        7:   44:    r.m[0]  = cos(radians);
+        7:   45:    r.m[2]  = sin(radians);
+        7:   46:    r.m[8]  = -sin(radians);
+        7:   47:    r.m[10] = cos(radians);
+        -:   48:
+        7:   49:    return r;
+        -:   50:}
+        -:   51:
+        3:   52:matrix_t transform_rotation_z(const double radians)
+        -:   53:{
+        3:   54:    matrix_t r = IDENTITY;
+        -:   55:
+        3:   56:    r.m[0] = cos(radians);
+        3:   57:    r.m[1] = -sin(radians);
+        3:   58:    r.m[4] = sin(radians);
+        3:   59:    r.m[5] = cos(radians);
+        -:   60:
+        3:   61:    return r;
+        -:   62:}
+        -:   63:
+        6:   64:matrix_t transform_shearing(const double x_y, const double x_z,
+        -:   65:                            const double y_x, const double y_z,
+        -:   66:                            const double z_x, const double z_y)
+        -:   67:{
+        6:   68:    matrix_t s = IDENTITY;
+        -:   69:
+        6:   70:    s.m[1] = x_y;
+        6:   71:    s.m[2] = x_z;
+        6:   72:    s.m[4] = y_x;
+        6:   73:    s.m[6] = y_z;
+        6:   74:    s.m[8] = z_x;
+        6:   75:    s.m[9] = z_y;
+        -:   76:
+        6:   77:    return s;
+        -:   78:}
+        -:   79:
+        5:   80:matrix_t transform_view(const tuple_t from, tuple_t to, tuple_t up)
+        -:   81:{
+        5:   82:    tuple_t direction = tuple_subtract(to, from);
+        5:   83:    if (tuple_magnitude(direction) < EPSILON)
+        -:   84:    {
+    #####:   85:        return IDENTITY;
+        -:   86:    }
+        -:   87:
+        5:   88:    tuple_t forward = tuple_normalize(direction);
+        5:   89:    tuple_t upn     = tuple_normalize(up);
+        5:   90:    tuple_t left    = tuple_cross(forward, upn);
+        -:   91:
+        5:   92:    if (tuple_magnitude(left) < EPSILON)
+        -:   93:    {
+    #####:   94:        if (fabs(forward.y) < 0.9)
+    #####:   95:            upn = vector(0, 1, 0);
+        -:   96:        else
+    #####:   97:            upn = vector(1, 0, 0);
+        -:   98:
+    #####:   99:        left = tuple_cross(forward, upn);
+    #####:  100:    }
+        -:  101:
+        5:  102:    tuple_t true_up = tuple_cross(left, forward);
+        -:  103:
+        5:  104:    matrix_t orientation;
+        -:  105:
+        5:  106:    orientation.m[0] = left.x;
+        5:  107:    orientation.m[1] = left.y;
+        5:  108:    orientation.m[2] = left.z;
+        5:  109:    orientation.m[3] = 0;
+        -:  110:
+        5:  111:    orientation.m[4] = true_up.x;
+        5:  112:    orientation.m[5] = true_up.y;
+        5:  113:    orientation.m[6] = true_up.z;
+        5:  114:    orientation.m[7] = 0;
+        -:  115:
+        5:  116:    orientation.m[8]  = -forward.x;
+        5:  117:    orientation.m[9]  = -forward.y;
+        5:  118:    orientation.m[10] = -forward.z;
+        5:  119:    orientation.m[11] = 0;
+        -:  120:
+        5:  121:    orientation.m[12] = 0;
+        5:  122:    orientation.m[13] = 0;
+        5:  123:    orientation.m[14] = 0;
+        5:  124:    orientation.m[15] = 1;
+        -:  125:
+        5:  126:    return matrix_mul(orientation,
+        5:  127:                      transform_translation(-from.x, -from.y, -from.z));
+        5:  128:}

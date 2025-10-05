@@ -1,0 +1,402 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/group.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/group.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/group.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/bounds.h"
+        -:    2:#include "../../include/dynamic_array.h"
+        -:    3:#include "../../include/shapes.h"
+        -:    4:#include <math.h>
+        -:    5:#include <stdio.h>
+        -:    6:#include <stdlib.h>
+        -:    7:#include <string.h>
+        -:    8:
+       37:    9:group_t *group(void)
+        -:   10:{
+       37:   11:    group_t *g = malloc(sizeof(group_t));
+       37:   12:    if (g == NULL)
+        -:   13:    {
+    #####:   14:        return NULL;
+        -:   15:    }
+        -:   16:
+       37:   17:    g->type                         = SHAPE_GROUP;
+       37:   18:    g->transform                    = IDENTITY;
+       37:   19:    g->inverse_transform            = IDENTITY;
+       37:   20:    g->transposed_inverse_transform = IDENTITY;
+       37:   21:    g->material                     = material();
+       37:   22:    g->parent                       = NULL;
+        -:   23:
+       37:   24:    g->child_count       = 0;
+       37:   25:    g->children_capacity = 16;
+       37:   26:    g->children          = calloc(g->children_capacity, sizeof(shape_t *));
+        -:   27:
+       37:   28:    if (g->children == NULL)
+        -:   29:    {
+    #####:   30:        free(g);
+    #####:   31:        return NULL;
+        -:   32:    }
+        -:   33:
+       37:   34:    g->bounds_cached     = false;
+       37:   35:    g->cached_bounds_min = point(0, 0, 0);
+       37:   36:    g->cached_bounds_max = point(0, 0, 0);
+        -:   37:
+       37:   38:    g->world_bounds        = bounding_box_empty();
+       37:   39:    g->world_bounds_cached = false;
+        -:   40:
+       37:   41:    return g;
+       37:   42:}
+        -:   43:
+       52:   44:static bool group_ensure_capacity(group_t *g)
+        -:   45:{
+       52:   46:    if (g == NULL)
+        -:   47:    {
+    #####:   48:        return false;
+        -:   49:    }
+        -:   50:
+       52:   51:    DYN_ARRAY_ENSURE_CAPACITY_IMPL(g->children, g->child_count,
+        -:   52:                                   g->children_capacity, shape_t *,
+        -:   53:                                   MAX_GROUP_CHILDREN);
+       52:   54:    return true;
+       52:   55:}
+        -:   56:
+       52:   57:static void group_invalidate_bounds_cache(group_t *g)
+        -:   58:{
+       59:   59:    while (g != NULL)
+        -:   60:    {
+       59:   61:        g->bounds_cached = false;
+       59:   62:        if (g->parent != NULL && ((shape_t *)g->parent)->type == SHAPE_GROUP)
+        -:   63:        {
+        7:   64:            g = (group_t *)g->parent;
+        7:   65:        }
+        -:   66:        else
+        -:   67:        {
+       52:   68:            break;
+        -:   69:        }
+        -:   70:    }
+       52:   71:}
+        -:   72:
+       52:   73:void group_add_child(group_t *g, shape_t *s)
+        -:   74:{
+       52:   75:    if (s == NULL || !group_ensure_capacity(g))
+        -:   76:    {
+    #####:   77:        return;
+        -:   78:    }
+        -:   79:
+       52:   80:    g->children[g->child_count] = s;
+       52:   81:    s->parent                   = g;
+       52:   82:    g->child_count++;
+        -:   83:
+       52:   84:    group_invalidate_bounds_cache(g);
+       52:   85:}
+        -:   86:
+        1:   87:bool group_includes(const group_t *g, const shape_t *s)
+        -:   88:{
+        1:   89:    if (g == NULL || s == NULL)
+        -:   90:    {
+    #####:   91:        return false;
+        -:   92:    }
+        -:   93:
+        2:   94:    for (unsigned i = 0; i < g->child_count; i++)
+        -:   95:    {
+        1:   96:        if (g->children[i] == s)
+        -:   97:        {
+        1:   98:            return true;
+        -:   99:        }
+    #####:  100:    }
+    #####:  101:    return false;
+        1:  102:}
+        -:  103:
+        5:  104:intersections_t group_local_intersect(const group_t *g, ray_t r)
+        -:  105:{
+        5:  106:    if (g == NULL)
+        -:  107:    {
+    #####:  108:        return empty_intersections();
+        -:  109:    }
+        -:  110:
+        -:  111:    intersections_t result;
+        5:  112:    result.count = 0;
+        -:  113:
+        5:  114:    if (g->child_count > 0)
+        -:  115:    {
+        4:  116:        bounding_box_t group_bounds = bounds_of_group(g);
+        4:  117:        if (!bounds_intersects(group_bounds, r))
+        -:  118:        {
+        1:  119:            return result;
+        -:  120:        }
+        4:  121:    }
+        -:  122:
+        9:  123:    for (unsigned i = 0; i < g->child_count; i++)
+        -:  124:    {
+        -:  125:
+        5:  126:        intersections_t child_xs = shape_intersect(g->children[i], r);
+        -:  127:
+       11:  128:        for (int j = 0; j < child_xs.count; j++)
+        -:  129:        {
+        6:  130:            if (result.count < MAX_INTERSECTIONS)
+        -:  131:            {
+        6:  132:                result.intersections[result.count] = child_xs.intersections[j];
+        6:  133:                result.count++;
+        6:  134:            }
+        -:  135:            else
+        -:  136:            {
+        -:  137:                static int overflow_warned = 0;
+    #####:  138:                if (!overflow_warned)
+        -:  139:                {
+    #####:  140:                    printf("WARNING: MAX_INTERSECTIONS overflow in "
+        -:  141:                           "group_local_intersect\n");
+    #####:  142:                    overflow_warned = 1;
+    #####:  143:                }
+        -:  144:            }
+        6:  145:        }
+        5:  146:    }
+        -:  147:
+        4:  148:    if (result.count > 1)
+        -:  149:    {
+        2:  150:        intersections_sort(&result);
+        2:  151:    }
+        -:  152:
+        4:  153:    return result;
+        5:  154:}
+        -:  155:
+        5:  156:intersections_t group_intersect(const group_t *g, ray_t r)
+        -:  157:{
+        5:  158:    return group_local_intersect(g, r);
+        -:  159:}
+        -:  160:
+       37:  161:void group_free(group_t *g)
+        -:  162:{
+       37:  163:    if (g == NULL)
+        -:  164:    {
+    #####:  165:        return;
+        -:  166:    }
+        -:  167:
+       37:  168:    if (g->children != NULL)
+        -:  169:    {
+       80:  170:        for (unsigned i = 0; i < g->child_count; i++)
+        -:  171:        {
+       43:  172:            if (g->children[i] != NULL)
+        -:  173:            {
+       43:  174:                shape_t *child = g->children[i];
+       43:  175:                child->parent  = NULL;
+        -:  176:
+       43:  177:                if (child->type == SHAPE_GROUP)
+        -:  178:                {
+       10:  179:                    group_free((group_t *)child);
+       10:  180:                }
+        -:  181:                else
+        -:  182:                {
+       33:  183:                    free(child);
+        -:  184:                }
+       43:  185:            }
+       43:  186:        }
+       37:  187:        free(g->children);
+       37:  188:        g->children = NULL;
+       37:  189:    }
+        -:  190:
+       37:  191:    g->child_count       = 0;
+       37:  192:    g->children_capacity = 0;
+        -:  193:
+       37:  194:    free(g);
+       37:  195:}
+        -:  196:
+       13:  197:shape_list_t shape_list_create(void)
+        -:  198:{
+        -:  199:    shape_list_t list;
+       13:  200:    list.capacity = 16;
+       13:  201:    list.count    = 0;
+       13:  202:    list.shapes   = calloc(list.capacity, sizeof(shape_t *));
+       13:  203:    if (list.shapes == NULL)
+        -:  204:    {
+    #####:  205:        list.capacity = 0;
+    #####:  206:    }
+       13:  207:    return list;
+        -:  208:}
+        -:  209:
+       13:  210:void shape_list_free(shape_list_t *list)
+        -:  211:{
+       13:  212:    if (list == NULL)
+        -:  213:    {
+    #####:  214:        return;
+        -:  215:    }
+        -:  216:
+       13:  217:    if (list->shapes != NULL)
+        -:  218:    {
+       13:  219:        free(list->shapes);
+       13:  220:        list->shapes = NULL;
+       13:  221:    }
+       13:  222:    list->count    = 0;
+       13:  223:    list->capacity = 0;
+       13:  224:}
+        -:  225:
+       11:  226:static bool shape_list_ensure_capacity(shape_list_t *list)
+        -:  227:{
+       11:  228:    if (list == NULL)
+        -:  229:    {
+    #####:  230:        return false;
+        -:  231:    }
+        -:  232:
+       11:  233:    DYN_ARRAY_ENSURE_CAPACITY_IMPL(list->shapes, list->count, list->capacity,
+        -:  234:                                   shape_t *, MAX_GROUP_CHILDREN);
+       11:  235:    return true;
+       11:  236:}
+        -:  237:
+       11:  238:void shape_list_add(shape_list_t *list, shape_t *shape)
+        -:  239:{
+       11:  240:    if (shape == NULL || !shape_list_ensure_capacity(list))
+        -:  241:    {
+    #####:  242:        return;
+        -:  243:    }
+        -:  244:
+       11:  245:    list->shapes[list->count] = shape;
+       11:  246:    list->count++;
+       11:  247:}
+        -:  248:
+        6:  249:void partition_children(group_t *group, shape_list_t *left, shape_list_t *right)
+        -:  250:{
+        6:  251:    if (group == NULL || left == NULL || right == NULL)
+    #####:  252:        return;
+        -:  253:
+        6:  254:    bounding_box_t group_bounds = bounds_of_group(group);
+        6:  255:    bounding_box_t left_bounds, right_bounds;
+        6:  256:    split_bounds(group_bounds, &left_bounds, &right_bounds);
+        -:  257:
+        6:  258:    shape_t **remaining = calloc(group->child_count, sizeof(shape_t *));
+        6:  259:    if (remaining == NULL)
+    #####:  260:        return;
+        6:  261:    unsigned remaining_count = 0;
+        -:  262:
+       19:  263:    for (unsigned i = 0; i < group->child_count; i++)
+        -:  264:    {
+       13:  265:        if (group->children[i] != NULL)
+        -:  266:        {
+        -:  267:
+       13:  268:            bounding_box_t child_bounds =
+       13:  269:                bounds_parent_space_bounds_of(group->children[i]);
+        -:  270:
+       13:  271:            if (bounds_box_contains_box(left_bounds, child_bounds))
+        -:  272:            {
+        5:  273:                shape_list_add(left, group->children[i]);
+        5:  274:                group->children[i]->parent = NULL;
+        5:  275:            }
+        -:  276:
+        8:  277:            else if (bounds_box_contains_box(right_bounds, child_bounds))
+        -:  278:            {
+        4:  279:                shape_list_add(right, group->children[i]);
+        4:  280:                group->children[i]->parent = NULL;
+        4:  281:            }
+        -:  282:
+        -:  283:            else
+        -:  284:            {
+        4:  285:                remaining[remaining_count] = group->children[i];
+        4:  286:                remaining_count++;
+        -:  287:            }
+       13:  288:        }
+       13:  289:    }
+        -:  290:
+       10:  291:    for (unsigned i = 0; i < remaining_count; i++)
+        -:  292:    {
+        4:  293:        group->children[i] = remaining[i];
+        4:  294:    }
+        6:  295:    group->child_count = remaining_count;
+        -:  296:
+       98:  297:    for (unsigned i = remaining_count; i < group->children_capacity; i++)
+        -:  298:    {
+       92:  299:        group->children[i] = NULL;
+       92:  300:    }
+        -:  301:
+        6:  302:    free(remaining);
+        6:  303:}
+        -:  304:
+        6:  305:void make_subgroup(group_t *parent_group, shape_list_t *children)
+        -:  306:{
+        6:  307:    if (parent_group == NULL || children == NULL || children->count == 0)
+    #####:  308:        return;
+        -:  309:
+        6:  310:    group_t *subgroup = group();
+        6:  311:    if (subgroup == NULL)
+        -:  312:    {
+    #####:  313:        for (unsigned i = 0; i < children->count; i++)
+        -:  314:        {
+    #####:  315:            if (children->shapes[i] != NULL)
+        -:  316:            {
+    #####:  317:                if (children->shapes[i]->type == SHAPE_GROUP)
+        -:  318:                {
+    #####:  319:                    group_free((group_t *)children->shapes[i]);
+    #####:  320:                }
+        -:  321:                else
+        -:  322:                {
+    #####:  323:                    free(children->shapes[i]);
+        -:  324:                }
+    #####:  325:            }
+    #####:  326:        }
+    #####:  327:        return;
+        -:  328:    }
+        -:  329:
+       15:  330:    for (unsigned i = 0; i < children->count; i++)
+        -:  331:    {
+        9:  332:        if (children->shapes[i] != NULL)
+        -:  333:        {
+        9:  334:            group_add_child(subgroup, children->shapes[i]);
+        9:  335:        }
+        9:  336:    }
+        -:  337:
+        6:  338:    if (subgroup->child_count > 0)
+        -:  339:    {
+        6:  340:        group_add_child(parent_group, (shape_t *)subgroup);
+        6:  341:    }
+        -:  342:    else
+        -:  343:    {
+        -:  344:
+    #####:  345:        group_free(subgroup);
+        -:  346:    }
+        6:  347:}
+        -:  348:
+        3:  349:void divide(shape_t *shape, unsigned threshold)
+        -:  350:{
+        3:  351:    if (shape == NULL)
+        -:  352:    {
+    #####:  353:        return;
+        -:  354:    }
+        -:  355:
+        3:  356:    divide_recursive(shape, threshold, 10);
+        3:  357:}
+        -:  358:
+       16:  359:void divide_recursive(shape_t *shape, unsigned threshold, unsigned max_depth)
+        -:  360:{
+       16:  361:    if (shape == NULL || max_depth == 0)
+    #####:  362:        return;
+        -:  363:
+       16:  364:    if (shape->type != SHAPE_GROUP)
+        -:  365:    {
+        8:  366:        return;
+        -:  367:    }
+        -:  368:
+        8:  369:    group_t *group = (group_t *)shape;
+        -:  370:
+        8:  371:    if (threshold <= group->child_count)
+        -:  372:    {
+        5:  373:        shape_list_t left  = shape_list_create();
+        5:  374:        shape_list_t right = shape_list_create();
+        -:  375:
+        5:  376:        partition_children(group, &left, &right);
+        -:  377:
+        5:  378:        if (left.count > 0)
+        -:  379:        {
+        3:  380:            make_subgroup(group, &left);
+        3:  381:        }
+        5:  382:        if (right.count > 0)
+        -:  383:        {
+        2:  384:            make_subgroup(group, &right);
+        2:  385:        }
+        -:  386:
+        5:  387:        shape_list_free(&left);
+        5:  388:        shape_list_free(&right);
+        5:  389:    }
+        -:  390:
+       21:  391:    for (unsigned i = 0; i < group->child_count; i++)
+        -:  392:    {
+       13:  393:        if (group->children[i] != NULL)
+        -:  394:        {
+       13:  395:            divide_recursive(group->children[i], threshold, max_depth - 1);
+       13:  396:        }
+       13:  397:    }
+       16:  398:}

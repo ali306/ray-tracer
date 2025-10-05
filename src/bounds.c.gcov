@@ -1,0 +1,293 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/bounds.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/bounds.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/bounds.c.gcda
+        -:    0:Runs:1
+        -:    1:// bounds.c
+        -:    2:
+        -:    3:#include "../include/bounds.h"
+        -:    4:
+      465:    5:bounding_box_t bounding_box_empty(void)
+        -:    6:{
+      930:    7:    return (bounding_box_t){point(DBL_MAX, DBL_MAX, DBL_MAX),
+      465:    8:                            point(-DBL_MAX, -DBL_MAX, -DBL_MAX)};
+        -:    9:}
+        -:   10:
+       39:   11:bounding_box_t bounding_box(tuple_t min, tuple_t max)
+        -:   12:{
+       39:   13:    return (bounding_box_t){min, max};
+        -:   14:}
+        -:   15:
+      913:   16:void bounds_add_point(bounding_box_t *box, tuple_t point)
+        -:   17:{
+      913:   18:    if (box == NULL)
+        -:   19:    {
+    #####:   20:        return;
+        -:   21:    }
+        -:   22:
+      913:   23:    box->min.x = point.x < box->min.x ? point.x : box->min.x;
+      913:   24:    box->min.y = point.y < box->min.y ? point.y : box->min.y;
+      913:   25:    box->min.z = point.z < box->min.z ? point.z : box->min.z;
+        -:   26:
+      913:   27:    box->max.x = point.x > box->max.x ? point.x : box->max.x;
+      913:   28:    box->max.y = point.y > box->max.y ? point.y : box->max.y;
+      913:   29:    box->max.z = point.z > box->max.z ? point.z : box->max.z;
+      913:   30:}
+        -:   31:
+      284:   32:bounding_box_t bounds_of(const void *shape_ptr)
+        -:   33:{
+      284:   34:    if (shape_ptr == NULL)
+        -:   35:    {
+    #####:   36:        return bounding_box_empty();
+        -:   37:    }
+        -:   38:
+      284:   39:    const shape_t *s   = (const shape_t *)shape_ptr;
+      284:   40:    bounding_box_t box = bounding_box_empty();
+        -:   41:
+      284:   42:    switch (s->type)
+        -:   43:    {
+        -:   44:    case SHAPE_SPHERE:
+      192:   45:        return (bounding_box_t){point(-1, -1, -1), point(1, 1, 1)};
+        -:   46:        break;
+        -:   47:
+        -:   48:    case SHAPE_PLANE:
+       40:   49:        return (bounding_box_t){point(-DBL_MAX, 0, -DBL_MAX),
+       20:   50:                                point(DBL_MAX, 0, DBL_MAX)};
+        -:   51:        break;
+        -:   52:
+        -:   53:    case SHAPE_CUBE:
+       20:   54:        return (bounding_box_t){point(-1, -1, -1), point(1, 1, 1)};
+        -:   55:        break;
+        -:   56:
+        -:   57:    case SHAPE_CYLINDER:
+        -:   58:    {
+       30:   59:        cylinder_t *cyl = (cylinder_t *)shape_ptr;
+       30:   60:        return (bounding_box_t){point(-1, cyl->minimum, -1),
+       30:   61:                                point(1, cyl->maximum, 1)};
+       30:   62:    }
+        -:   63:    break;
+        -:   64:
+        -:   65:    case SHAPE_CONE:
+        -:   66:    {
+       11:   67:        cone_t *cone = (cone_t *)shape_ptr;
+       11:   68:        double a     = fabs(cone->minimum);
+       11:   69:        double b     = fabs(cone->maximum);
+       11:   70:        double limit = fmax(a, b);
+        -:   71:
+       11:   72:        return (bounding_box_t){point(-limit, cone->minimum, -limit),
+       11:   73:                                point(limit, cone->maximum, limit)};
+       11:   74:    }
+        -:   75:    break;
+        -:   76:
+        -:   77:    case SHAPE_TEST:
+        4:   78:        return (bounding_box_t){point(-1, -1, -1), point(1, 1, 1)};
+        -:   79:        break;
+        -:   80:
+        -:   81:    case SHAPE_TRIANGLE:
+    #####:   82:        return bounds_of_triangle(*(const triangle_t *)shape_ptr);
+        -:   83:        break;
+        -:   84:
+        -:   85:    case SHAPE_SMOOTH_TRIANGLE:
+    #####:   86:        return bounds_of_triangle(*(const triangle_t *)shape_ptr);
+        -:   87:        break;
+        -:   88:
+        -:   89:    case SHAPE_GROUP:
+        7:   90:        return bounds_of_group(shape_ptr);
+        -:   91:        break;
+        -:   92:
+        -:   93:    default:
+    #####:   94:        return box;
+        -:   95:        break;
+        -:   96:    }
+      284:   97:}
+        -:   98:
+       25:   99:bounding_box_t bounds_of_triangle(triangle_t triangle)
+        -:  100:{
+       25:  101:    bounding_box_t box = bounding_box_empty();
+       25:  102:    bounds_add_point(&box, triangle.p1);
+       25:  103:    bounds_add_point(&box, triangle.p2);
+       25:  104:    bounds_add_point(&box, triangle.p3);
+       25:  105:    return box;
+        -:  106:}
+        -:  107:
+       22:  108:void bounds_add_box(bounding_box_t *box1, const bounding_box_t *box2)
+        -:  109:{
+       22:  110:    if (box1 == NULL || box2 == NULL)
+        -:  111:    {
+    #####:  112:        return;
+        -:  113:    }
+        -:  114:
+       22:  115:    bounds_add_point(box1, box2->min);
+       22:  116:    bounds_add_point(box1, box2->max);
+       22:  117:}
+        -:  118:
+       50:  119:bool bounds_box_contains_point(bounding_box_t box, tuple_t point)
+        -:  120:{
+       85:  121:    return (point.x >= box.min.x && point.x <= box.max.x) &&
+       35:  122:           (point.y >= box.min.y && point.y <= box.max.y) &&
+       32:  123:           (point.z >= box.min.z && point.z <= box.max.z);
+        -:  124:}
+        -:  125:
+       25:  126:bool bounds_box_contains_box(bounding_box_t box1, bounding_box_t box2)
+        -:  127:{
+       41:  128:    return bounds_box_contains_point(box1, box2.min) &&
+       16:  129:           bounds_box_contains_point(box1, box2.max);
+        -:  130:}
+        -:  131:
+       99:  132:bounding_box_t bounds_transform(bounding_box_t bbox, matrix_t matrix)
+        -:  133:{
+       99:  134:    tuple_t p1        = bbox.min;
+       99:  135:    tuple_t p2        = point(bbox.min.x, bbox.min.y, bbox.max.z);
+       99:  136:    tuple_t p3        = point(bbox.min.x, bbox.max.y, bbox.min.z);
+       99:  137:    tuple_t p4        = point(bbox.min.x, bbox.max.y, bbox.max.z);
+       99:  138:    tuple_t p5        = point(bbox.max.x, bbox.min.y, bbox.min.z);
+       99:  139:    tuple_t p6        = point(bbox.max.x, bbox.min.y, bbox.max.z);
+       99:  140:    tuple_t p7        = point(bbox.max.x, bbox.max.y, bbox.min.z);
+       99:  141:    tuple_t p8        = bbox.max;
+       99:  142:    tuple_t points[8] = {p1, p2, p3, p4, p5, p6, p7, p8};
+        -:  143:
+       99:  144:    bounding_box_t new_bbox = bounding_box_empty();
+        -:  145:
+      891:  146:    for (int i = 0; i < 8; i++)
+        -:  147:    {
+      792:  148:        bounds_add_point(&new_bbox, matrix_tmul(matrix, points[i]));
+      792:  149:    }
+        -:  150:    return new_bbox;
+       99:  151:}
+        -:  152:
+       35:  153:bounding_box_t bounds_parent_space_bounds_of(const shape_t *shape)
+        -:  154:{
+       35:  155:    if (shape == NULL)
+        -:  156:    {
+    #####:  157:        return bounding_box_empty();
+        -:  158:    }
+        -:  159:
+       35:  160:    return bounds_transform(bounds_of(shape), shape->transform);
+       35:  161:}
+        -:  162:
+       18:  163:bounding_box_t bounds_of_group(const void *group_ptr)
+        -:  164:{
+       18:  165:    if (group_ptr == NULL)
+        -:  166:    {
+    #####:  167:        return bounding_box_empty();
+        -:  168:    }
+        -:  169:
+       18:  170:    group_t *group = (group_t *)group_ptr;
+        -:  171:
+       18:  172:    if (group->bounds_cached)
+        -:  173:    {
+    #####:  174:        return bounding_box(group->cached_bounds_min, group->cached_bounds_max);
+        -:  175:    }
+        -:  176:
+       18:  177:    bounding_box_t box = bounding_box_empty();
+        -:  178:
+       39:  179:    for (unsigned i = 0; i < group->child_count; i++)
+        -:  180:    {
+       21:  181:        if (group->children[i] != NULL)
+        -:  182:        {
+       21:  183:            bounding_box_t cbox;
+       21:  184:            if (group->children[i]->type == SHAPE_GROUP)
+        -:  185:            {
+    #####:  186:                bounding_box_t child_group_box =
+    #####:  187:                    bounds_of_group(group->children[i]);
+    #####:  188:                cbox = bounds_transform(child_group_box,
+    #####:  189:                                        group->children[i]->transform);
+    #####:  190:            }
+        -:  191:            else
+        -:  192:            {
+       21:  193:                cbox = bounds_parent_space_bounds_of(group->children[i]);
+        -:  194:            }
+       21:  195:            bounds_add_box(&box, &cbox);
+       21:  196:        }
+       21:  197:    }
+        -:  198:
+       18:  199:    group->cached_bounds_min = box.min;
+       18:  200:    group->cached_bounds_max = box.max;
+       18:  201:    group->bounds_cached     = true;
+        -:  202:
+       18:  203:    return box;
+       18:  204:}
+        -:  205:
+     1557:  206:static void bounds_check_axis(const double origin, const double direction,
+        -:  207:                              const double min_bound, const double max_bound,
+        -:  208:                              double *tmin, double *tmax)
+        -:  209:{
+     1557:  210:    if (tmin == NULL || tmax == NULL)
+        -:  211:    {
+       48:  212:        return;
+        -:  213:    }
+        -:  214:
+     1509:  215:    double tmin_numerator = (min_bound - origin);
+     1509:  216:    double tmax_numerator = (max_bound - origin);
+        -:  217:
+     1509:  218:    if (fabs(direction) >= EPSILON)
+        -:  219:    {
+     1269:  220:        *tmin = tmin_numerator / direction;
+     1269:  221:        *tmax = tmax_numerator / direction;
+     1269:  222:    }
+        -:  223:    else
+        -:  224:    {
+      240:  225:        *tmin = tmin_numerator >= 0 ? 1e6 : -1e6;
+      240:  226:        *tmax = tmax_numerator >= 0 ? 1e6 : -1e6;
+        -:  227:    }
+        -:  228:
+     1509:  229:    if (*tmin > *tmax)
+        -:  230:    {
+      570:  231:        double temp = *tmin;
+      570:  232:        *tmin       = *tmax;
+      570:  233:        *tmax       = temp;
+      570:  234:    }
+     1509:  235:}
+        -:  236:
+      502:  237:bool bounds_intersects(bounding_box_t box, ray_t ray)
+        -:  238:{
+      502:  239:    double xtmin, xtmax, ytmin, ytmax, ztmin, ztmax;
+        -:  240:
+      502:  241:    bounds_check_axis(ray.origin.x, ray.direction.x, box.min.x, box.max.x,
+        -:  242:                      &xtmin, &xtmax);
+      502:  243:    bounds_check_axis(ray.origin.y, ray.direction.y, box.min.y, box.max.y,
+        -:  244:                      &ytmin, &ytmax);
+      502:  245:    bounds_check_axis(ray.origin.z, ray.direction.z, box.min.z, box.max.z,
+        -:  246:                      &ztmin, &ztmax);
+        -:  247:
+      502:  248:    double tmin = fmax(fmax(xtmin, ytmin), ztmin);
+      502:  249:    double tmax = fmin(fmin(xtmax, ytmax), ztmax);
+        -:  250:
+     1004:  251:    return tmin <= tmax;
+      502:  252:}
+        -:  253:
+       10:  254:void split_bounds(bounding_box_t box, bounding_box_t *left,
+        -:  255:                  bounding_box_t *right)
+        -:  256:{
+       10:  257:    if (left == NULL || right == NULL)
+        -:  258:    {
+    #####:  259:        return;
+        -:  260:    }
+        -:  261:
+       10:  262:    double dx = box.max.x - box.min.x;
+       10:  263:    double dy = box.max.y - box.min.y;
+       10:  264:    double dz = box.max.z - box.min.z;
+        -:  265:
+       10:  266:    double greatest = fmax(fmax(dx, dy), dz);
+        -:  267:
+       10:  268:    double x0 = box.min.x, y0 = box.min.y, z0 = box.min.z;
+       10:  269:    double x1 = box.max.x, y1 = box.max.y, z1 = box.max.z;
+        -:  270:
+       10:  271:    if (fabs(greatest - dx) < EPSILON)
+        -:  272:    {
+        7:  273:        x0 = x1 = box.min.x + dx / 2.0;
+        7:  274:    }
+        3:  275:    else if (fabs(greatest - dy) < EPSILON)
+        -:  276:    {
+        2:  277:        y0 = y1 = box.min.y + dy / 2.0;
+        2:  278:    }
+        -:  279:    else
+        -:  280:    {
+        1:  281:        z0 = z1 = box.min.z + dz / 2.0;
+        -:  282:    }
+        -:  283:
+       10:  284:    tuple_t mid_min = point(x0, y0, z0);
+       10:  285:    tuple_t mid_max = point(x1, y1, z1);
+        -:  286:
+       10:  287:    *left  = bounding_box(box.min, mid_max);
+       10:  288:    *right = bounding_box(mid_min, box.max);
+       10:  289:}

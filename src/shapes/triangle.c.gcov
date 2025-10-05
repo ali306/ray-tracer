@@ -1,0 +1,139 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/triangle.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/triangle.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/triangle.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/bounds.h"
+        -:    2:#include "../../include/shapes.h"
+        -:    3:#include <math.h>
+        -:    4:#include <stdio.h>
+        -:    5:#include <stdlib.h>
+        -:    6:
+       18:    7:triangle_t triangle(tuple_t p1, tuple_t p2, tuple_t p3)
+        -:    8:{
+        -:    9:    triangle_t t;
+       18:   10:    t.type                         = SHAPE_TRIANGLE;
+       18:   11:    t.transform                    = IDENTITY;
+       18:   12:    t.inverse_transform            = IDENTITY;
+       18:   13:    t.transposed_inverse_transform = IDENTITY;
+       18:   14:    t.material                     = material();
+       18:   15:    t.parent                       = NULL;
+        -:   16:
+       18:   17:    t.p1 = p1;
+       18:   18:    t.p2 = p2;
+       18:   19:    t.p3 = p3;
+        -:   20:
+       18:   21:    t.e1 = tuple_subtract(p2, p1);
+       18:   22:    t.e2 = tuple_subtract(p3, p1);
+        -:   23:
+       18:   24:    t.normal = tuple_normalize(tuple_cross(t.e2, t.e1));
+        -:   25:
+       18:   26:    bounding_box_t local_bounds = bounds_of_triangle(t);
+       18:   27:    t.world_bounds              = local_bounds;
+       18:   28:    t.world_bounds_cached       = true;
+        -:   29:
+        -:   30:    return t;
+       18:   31:}
+        -:   32:
+        6:   33:smooth_triangle_t smooth_triangle(tuple_t p1, tuple_t p2, tuple_t p3,
+        -:   34:                                  tuple_t n1, tuple_t n2, tuple_t n3)
+        -:   35:{
+        -:   36:    smooth_triangle_t t;
+        6:   37:    t.type                         = SHAPE_SMOOTH_TRIANGLE;
+        6:   38:    t.transform                    = IDENTITY;
+        6:   39:    t.inverse_transform            = IDENTITY;
+        6:   40:    t.transposed_inverse_transform = IDENTITY;
+        6:   41:    t.material                     = material();
+        6:   42:    t.parent                       = NULL;
+        -:   43:
+        6:   44:    t.p1 = p1;
+        6:   45:    t.p2 = p2;
+        6:   46:    t.p3 = p3;
+        -:   47:
+        6:   48:    t.e1 = tuple_subtract(p2, p1);
+        6:   49:    t.e2 = tuple_subtract(p3, p1);
+        -:   50:
+        6:   51:    t.normal = tuple_normalize(tuple_cross(t.e2, t.e1));
+        -:   52:
+        6:   53:    t.n1 = n1;
+        6:   54:    t.n2 = n2;
+        6:   55:    t.n3 = n3;
+        -:   56:
+        6:   57:    bounding_box_t local_bounds = bounds_of_triangle(*(triangle_t *)&t);
+        6:   58:    t.world_bounds              = local_bounds;
+        6:   59:    t.world_bounds_cached       = true;
+        -:   60:
+        -:   61:    return t;
+        6:   62:}
+        -:   63:
+        5:   64:intersections_t triangle_intersect(const triangle_t *t, ray_t r)
+        -:   65:{
+        5:   66:    if (t == NULL)
+        -:   67:    {
+    #####:   68:        return empty_intersections();
+        -:   69:    }
+        -:   70:
+        5:   71:    tuple_t dir_cross_e2 = tuple_cross(r.direction, t->e2);
+        5:   72:    double det           = tuple_dot(t->e1, dir_cross_e2);
+        -:   73:
+        5:   74:    if (fabs(det) < EPSILON)
+        -:   75:    {
+        1:   76:        return empty_intersections();
+        -:   77:    }
+        -:   78:
+        4:   79:    double f             = 1.0 / det;
+        4:   80:    tuple_t p1_to_origin = tuple_subtract(r.origin, t->p1);
+        4:   81:    double u             = f * tuple_dot(p1_to_origin, dir_cross_e2);
+        -:   82:
+        4:   83:    if (u < 0 || u > 1)
+        -:   84:    {
+        1:   85:        return empty_intersections();
+        -:   86:    }
+        -:   87:
+        3:   88:    tuple_t origin_cross_e1 = tuple_cross(p1_to_origin, t->e1);
+        3:   89:    double v                = f * tuple_dot(r.direction, origin_cross_e1);
+        -:   90:
+        3:   91:    if (v < 0 || (u + v) > 1)
+        -:   92:    {
+        2:   93:        return empty_intersections();
+        -:   94:    }
+        -:   95:
+        1:   96:    double ray_t = f * tuple_dot(t->e2, origin_cross_e1);
+        -:   97:
+        -:   98:    intersections_t result;
+        1:   99:    result.count            = 1;
+        1:  100:    result.intersections[0] = intersection_with_uv(ray_t, (void *)t, u, v);
+        -:  101:    return result;
+        5:  102:}
+        -:  103:
+        1:  104:intersections_t smooth_triangle_intersect(const smooth_triangle_t *t, ray_t r)
+        -:  105:{
+        1:  106:    if (t == NULL)
+        -:  107:    {
+    #####:  108:        return empty_intersections();
+        -:  109:    }
+        1:  110:    tuple_t dir_cross_e2 = tuple_cross(r.direction, t->e2);
+        1:  111:    double det           = tuple_dot(t->e1, dir_cross_e2);
+        1:  112:    if (fabs(det) < EPSILON)
+        -:  113:    {
+    #####:  114:        return empty_intersections();
+        -:  115:    }
+        1:  116:    double f             = 1.0 / det;
+        1:  117:    tuple_t p1_to_origin = tuple_subtract(r.origin, t->p1);
+        1:  118:    double u             = f * tuple_dot(p1_to_origin, dir_cross_e2);
+        1:  119:    if (u < 0 || u > 1)
+        -:  120:    {
+    #####:  121:        return empty_intersections();
+        -:  122:    }
+        1:  123:    tuple_t origin_cross_e1 = tuple_cross(p1_to_origin, t->e1);
+        1:  124:    double v                = f * tuple_dot(r.direction, origin_cross_e1);
+        1:  125:    if (v < 0 || (u + v) > 1)
+        -:  126:    {
+    #####:  127:        return empty_intersections();
+        -:  128:    }
+        1:  129:    double ray_t = f * tuple_dot(t->e2, origin_cross_e1);
+        -:  130:
+        -:  131:    intersections_t result;
+        1:  132:    result.count            = 1;
+        1:  133:    result.intersections[0] = intersection_with_uv(ray_t, (void *)t, u, v);
+        -:  134:    return result;
+        1:  135:}

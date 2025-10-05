@@ -1,0 +1,96 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/camera.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/camera.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/camera.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../include/camera.h"
+        -:    2:#include <math.h>
+        -:    3:
+        -:    4:#include <omp.h>
+        -:    5:#include <stdio.h>
+        -:    6:
+        7:    7:camera_t camera(const unsigned hsize, const unsigned vsize,
+        -:    8:                const double field_of_view)
+        -:    9:{
+        7:   10:    camera_t c = {hsize, vsize, field_of_view, IDENTITY, IDENTITY, 1, 1, 1};
+        7:   11:    double half_view = tan(c.field_of_view / 2);
+        7:   12:    double aspect    = (double)c.hsize / (double)c.vsize;
+        -:   13:
+        7:   14:    if (aspect >= 1)
+        -:   15:    {
+        6:   16:        c.half_width  = half_view;
+        6:   17:        c.half_height = half_view / aspect;
+        6:   18:    }
+        -:   19:    else
+        -:   20:    {
+        1:   21:        c.half_width  = half_view * aspect;
+        1:   22:        c.half_height = half_view;
+        -:   23:    }
+        -:   24:
+        7:   25:    c.pixel_size = (c.half_width * 2.0) / c.hsize;
+        -:   26:
+        -:   27:    return c;
+        7:   28:}
+        -:   29:
+      123:   30:ray_t camera_ray_for_pixel(const camera_t *c, unsigned px, unsigned py)
+        -:   31:{
+      123:   32:    if (c == NULL)
+        -:   33:    {
+    #####:   34:        return ray(point(0, 0, 0), vector(0, 0, 1));
+        -:   35:    }
+        -:   36:
+      123:   37:    double xoffset = (px + 0.5) * c->pixel_size;
+      123:   38:    double yoffset = (py + 0.5) * c->pixel_size;
+        -:   39:
+      123:   40:    double world_x = c->half_width - xoffset;
+      123:   41:    double world_y = c->half_height - yoffset;
+        -:   42:
+      123:   43:    tuple_t origin    = matrix_tmul(c->inverse_transform, point(0, 0, 0));
+      246:   44:    tuple_t direction = tuple_normalize(tuple_subtract(
+      123:   45:        matrix_tmul(c->inverse_transform, point(world_x, world_y, -1)),
+        -:   46:        origin));
+        -:   47:
+      123:   48:    return ray(origin, direction);
+      123:   49:}
+        -:   50:
+        2:   51:void camera_set_transform(camera_t *c, matrix_t transform)
+        -:   52:{
+        2:   53:    if (c == NULL)
+        -:   54:    {
+    #####:   55:        return;
+        -:   56:    }
+        -:   57:
+        2:   58:    c->transform         = transform;
+        2:   59:    c->inverse_transform = matrix_inverse(transform);
+        2:   60:}
+        -:   61:
+        1:   62:canvas_t *camera_render(const camera_t *c, const world_t *w)
+        -:   63:{
+        1:   64:    if (!c || !w)
+        -:   65:    {
+    #####:   66:        printf("Invalid parameters for camera_render\n");
+    #####:   67:        return NULL;
+        -:   68:    }
+        -:   69:
+        1:   70:    canvas_t *image = canvas(c->hsize, c->vsize);
+        1:   71:    if (!image)
+        -:   72:    {
+    #####:   73:        printf("Failed to create canvas for rendering\n");
+    #####:   74:        return NULL;
+        -:   75:    }
+        -:   76:
+        1:   77:    printf("Rendering %dx%d image...\n", c->hsize, c->vsize);
+        -:   78:
+      159:   79:#pragma omp parallel for schedule(dynamic, 64) collapse(2)
+      203:   80:    for (unsigned y = 0; y < c->vsize; y++)
+        -:   81:    {
+      507:   82:        for (unsigned x = 0; x < c->hsize; x++)
+        -:   83:        {
+      120:   84:            ray_t ray     = camera_ray_for_pixel(c, x, y);
+      120:   85:            tuple_t color = world_color_at(w, &ray, MAX_RECURSION);
+      120:   86:            canvas_write_pixel(image, x, y, color);
+      120:   87:        }
+        9:   88:    }
+        -:   89:
+        1:   90:    printf("Rendering complete!\n");
+        1:   91:    return image;
+        1:   92:}

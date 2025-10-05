@@ -1,0 +1,153 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/canvas.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/canvas.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/canvas.c.gcda
+        -:    0:Runs:1
+        -:    1:// canvas.c
+        -:    2:
+        -:    3:#include "../include/canvas.h"
+        -:    4:
+        -:    5:#include <errno.h>
+        -:    6:#include <math.h>
+        -:    7:#include <stdio.h>
+        -:    8:#include <stdlib.h>
+        -:    9:#include <string.h>
+        -:   10:
+        5:   11:canvas_t *canvas(unsigned width, unsigned height)
+        -:   12:{
+        5:   13:    if (width == 0 || height == 0)
+    #####:   14:        return NULL;
+        -:   15:
+        5:   16:    canvas_t *c = malloc(sizeof(canvas_t));
+        5:   17:    if (c == NULL)
+    #####:   18:        return NULL;
+        -:   19:
+        5:   20:    c->width  = width;
+        5:   21:    c->height = height;
+        5:   22:    c->pixels = calloc(width * height, sizeof(tuple_t));
+        -:   23:
+        5:   24:    if (c->pixels == NULL)
+        -:   25:    {
+    #####:   26:        free(c);
+    #####:   27:        return NULL;
+        -:   28:    }
+        -:   29:
+        5:   30:    return c;
+        5:   31:}
+        -:   32:
+      124:   33:void canvas_write_pixel(canvas_t *c, unsigned x, unsigned y, tuple_t color)
+        -:   34:{
+      124:   35:    if (c == NULL || x >= c->width || y >= c->height)
+        -:   36:    {
+    #####:   37:        return;
+        -:   38:    }
+        -:   39:
+      124:   40:    tuple_t *pixel = &c->pixels[y * c->width + x];
+      124:   41:    pixel->x       = canvas_clamp(color.x);
+      124:   42:    pixel->y       = canvas_clamp(color.y);
+      124:   43:    pixel->z       = canvas_clamp(color.z);
+      124:   44:    pixel->w       = canvas_clamp(color.w);
+      124:   45:}
+        -:   46:
+        2:   47:tuple_t canvas_pixel_at(const canvas_t *c, unsigned x, unsigned y)
+        -:   48:{
+        2:   49:    if (c == NULL || x >= c->width || y >= c->height)
+        -:   50:    {
+    #####:   51:        return color(0, 0, 0);
+        -:   52:    }
+        -:   53:
+        2:   54:    return c->pixels[y * c->width + x];
+        2:   55:}
+        -:   56:
+        2:   57:char *canvas_to_ppm(const canvas_t *c)
+        -:   58:{
+        2:   59:    if (!c || c->width <= 0 || c->height <= 0)
+    #####:   60:        return NULL;
+        -:   61:
+        2:   62:    size_t size = 32 + (12ULL * c->width * c->height);
+        2:   63:    if (size < (12ULL * c->width * c->height))
+    #####:   64:        return NULL;
+        2:   65:    char *buffer = malloc(size);
+        2:   66:    if (!buffer)
+    #####:   67:        return NULL;
+        -:   68:
+        2:   69:    int pos = sprintf(buffer, "P3\n%u %u\n255\n", c->width, c->height);
+        -:   70:
+        8:   71:    for (unsigned y = 0; y < c->height; y++)
+        -:   72:    {
+       36:   73:        for (unsigned x = 0; x < c->width; x++)
+        -:   74:        {
+       30:   75:            tuple_t pixel = c->pixels[y * c->width + x];
+        -:   76:
+       30:   77:            int r = (int)round(255.0 * canvas_clamp(pixel.x));
+       30:   78:            int g = (int)round(255.0 * canvas_clamp(pixel.y));
+       30:   79:            int b = (int)round(255.0 * canvas_clamp(pixel.z));
+        -:   80:
+       30:   81:            pos += sprintf(buffer + pos, "%d %d %d ", r, g, b);
+       30:   82:        }
+        -:   83:
+        6:   84:        buffer[pos - 1] = '\n';
+        6:   85:    }
+        -:   86:
+        2:   87:    return buffer;
+        2:   88:}
+        -:   89:
+        5:   90:void canvas_free(canvas_t *c)
+        -:   91:{
+        5:   92:    if (c)
+        -:   93:    {
+        5:   94:        free(c->pixels);
+        5:   95:        free(c);
+        5:   96:    }
+        5:   97:}
+        -:   98:
+    #####:   99:bool canvas_save(const canvas_t *c, const char *file_path)
+        -:  100:{
+    #####:  101:    if (!c || !file_path)
+        -:  102:    {
+    #####:  103:        fprintf(stderr, "Invalid parameters for canvas_save\n");
+    #####:  104:        return false;
+        -:  105:    }
+        -:  106:
+    #####:  107:    FILE *file = fopen(file_path, "wb");
+    #####:  108:    if (!file)
+        -:  109:    {
+    #####:  110:        fprintf(stderr, "Failed to open %s for writing (%s)\n", file_path,
+    #####:  111:                strerror(errno));
+    #####:  112:        return false;
+        -:  113:    }
+        -:  114:
+    #####:  115:    fprintf(file, "P3\n%u %u\n255\n", c->width, c->height);
+        -:  116:
+    #####:  117:    char *line_buffer = malloc(c->width * 12 + 2);
+    #####:  118:    if (!line_buffer)
+        -:  119:    {
+    #####:  120:        fclose(file);
+    #####:  121:        return false;
+        -:  122:    }
+        -:  123:
+    #####:  124:    for (unsigned y = 0; y < c->height; y++)
+        -:  125:    {
+    #####:  126:        int line_pos = 0;
+        -:  127:
+    #####:  128:        for (unsigned x = 0; x < c->width; x++)
+        -:  129:        {
+    #####:  130:            tuple_t pixel = c->pixels[y * c->width + x];
+        -:  131:
+    #####:  132:            int r = (int)round(255.0 * canvas_clamp(pixel.x));
+    #####:  133:            int g = (int)round(255.0 * canvas_clamp(pixel.y));
+    #####:  134:            int b = (int)round(255.0 * canvas_clamp(pixel.z));
+        -:  135:
+    #####:  136:            line_pos += sprintf(line_buffer + line_pos, "%d %d %d ", r, g, b);
+    #####:  137:        }
+        -:  138:
+    #####:  139:        line_buffer[line_pos - 1] = '\n';
+    #####:  140:        line_buffer[line_pos]     = '\0';
+        -:  141:
+    #####:  142:        fputs(line_buffer, file);
+    #####:  143:    }
+        -:  144:
+    #####:  145:    free(line_buffer);
+    #####:  146:    fclose(file);
+        -:  147:
+    #####:  148:    return true;
+    #####:  149:}

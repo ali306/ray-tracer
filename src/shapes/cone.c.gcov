@@ -1,0 +1,124 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/cone.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/cone.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/cone.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/shapes.h"
+        -:    2:#include <float.h>
+        -:    3:#include <math.h>
+        -:    4:
+        6:    5:static bool check_cap(ray_t ray, double t, double y)
+        -:    6:{
+        6:    7:    double x = ray.origin.x + t * ray.direction.x;
+        6:    8:    double z = ray.origin.z + t * ray.direction.z;
+       12:    9:    return (x * x + z * z) <= (y * y);
+        6:   10:}
+        -:   11:
+        7:   12:static void intersect_caps(const cone_t *cone, ray_t ray, intersections_t *xs)
+        -:   13:{
+        7:   14:    if (!cone->closed || fabs(ray.direction.y) < EPSILON)
+        -:   15:    {
+        4:   16:        return;
+        -:   17:    }
+        -:   18:
+        3:   19:    double t = (cone->minimum - ray.origin.y) / ray.direction.y;
+        3:   20:    if (check_cap(ray, t, cone->minimum))
+        -:   21:    {
+        1:   22:        xs->intersections[xs->count++] = intersection(t, (void *)cone);
+        1:   23:    }
+        -:   24:
+        3:   25:    t = (cone->maximum - ray.origin.y) / ray.direction.y;
+        3:   26:    if (check_cap(ray, t, cone->maximum))
+        -:   27:    {
+        2:   28:        xs->intersections[xs->count++] = intersection(t, (void *)cone);
+        2:   29:    }
+        7:   30:}
+        -:   31:
+        9:   32:cone_t cone(void)
+        -:   33:{
+        -:   34:    cone_t c;
+        9:   35:    c.minimum = -DBL_MAX;
+        9:   36:    c.maximum = DBL_MAX;
+        9:   37:    c.closed  = false;
+        9:   38:    shape((shape_t *)&c, SHAPE_CONE);
+        9:   39:    return c;
+        -:   40:}
+        -:   41:
+        7:   42:intersections_t cone_intersect(const cone_t *c, ray_t r)
+        -:   43:{
+        -:   44:    intersections_t result;
+        7:   45:    result.count = 0;
+        -:   46:
+        7:   47:    if (c == NULL)
+        -:   48:    {
+    #####:   49:        return result;
+        -:   50:    }
+        -:   51:
+       14:   52:    double a = r.direction.x * r.direction.x - r.direction.y * r.direction.y +
+        7:   53:               r.direction.z * r.direction.z;
+        -:   54:
+       21:   55:    double b = 2.0 * r.origin.x * r.direction.x -
+       14:   56:               2.0 * r.origin.y * r.direction.y +
+        7:   57:               2.0 * r.origin.z * r.direction.z;
+        -:   58:
+       14:   59:    double c_coef = r.origin.x * r.origin.x - r.origin.y * r.origin.y +
+        7:   60:                    r.origin.z * r.origin.z;
+        -:   61:
+        7:   62:    if (fabs(a) < EPSILON)
+        -:   63:    {
+        2:   64:        if (fabs(b) < EPSILON)
+        -:   65:        {
+    #####:   66:            intersect_caps(c, r, &result);
+    #####:   67:            return result;
+        -:   68:        }
+        -:   69:
+        2:   70:        double t = -c_coef / (2.0 * b);
+        2:   71:        double y = r.origin.y + t * r.direction.y;
+        2:   72:        if (c->minimum < y && y < c->maximum)
+        -:   73:        {
+        2:   74:            result.intersections[result.count++] = intersection(t, (void *)c);
+        2:   75:        }
+        -:   76:
+        2:   77:        intersect_caps(c, r, &result);
+        -:   78:        return result;
+        2:   79:    }
+        -:   80:
+        5:   81:    double disc = b * b - 4.0 * a * c_coef;
+        -:   82:
+        5:   83:    if (disc < -EPSILON)
+        -:   84:    {
+    #####:   85:        intersect_caps(c, r, &result);
+    #####:   86:        return result;
+        -:   87:    }
+        -:   88:
+        5:   89:    if (disc < 0.0)
+        -:   90:    {
+        1:   91:        disc = 0.0;
+        1:   92:    }
+        -:   93:
+        5:   94:    double sqrt_disc = sqrt(disc);
+        5:   95:    double t0        = (-b - sqrt_disc) / (2.0 * a);
+        5:   96:    double t1        = (-b + sqrt_disc) / (2.0 * a);
+        -:   97:
+        5:   98:    if (t0 > t1)
+        -:   99:    {
+        2:  100:        double temp = t0;
+        2:  101:        t0          = t1;
+        2:  102:        t1          = temp;
+        2:  103:    }
+        -:  104:
+        5:  105:    double y0 = r.origin.y + t0 * r.direction.y;
+        5:  106:    if (c->minimum < y0 && y0 < c->maximum)
+        -:  107:    {
+        4:  108:        result.intersections[result.count++] = intersection(t0, (void *)c);
+        4:  109:    }
+        -:  110:
+        5:  111:    double y1 = r.origin.y + t1 * r.direction.y;
+        5:  112:    if (c->minimum < y1 && y1 < c->maximum)
+        -:  113:    {
+        4:  114:        result.intersections[result.count++] = intersection(t1, (void *)c);
+        4:  115:    }
+        -:  116:
+        5:  117:    intersect_caps(c, r, &result);
+        -:  118:
+        -:  119:    return result;
+        7:  120:}

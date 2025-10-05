@@ -1,0 +1,119 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/patterns.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/patterns.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/patterns.c.gcda
+        -:    0:Runs:1
+        -:    1:// patterns.c
+        -:    2:
+        -:    3:#include "../include/patterns.h"
+        -:    4:#include <math.h>
+        -:    5:#include <stdio.h>
+        -:    6:
+       14:    7:pattern_t pattern(const pattern_type_t type)
+        -:    8:{
+       56:    9:    pattern_t pattern = {.type              = type,
+       14:   10:                         .transform         = IDENTITY,
+       14:   11:                         .inverse_transform = IDENTITY,
+       14:   12:                         .a                 = WHITE,
+       14:   13:                         .b                 = BLACK};
+       14:   14:    return pattern;
+        -:   15:}
+        -:   16:
+        3:   17:void patterns_set_transform(pattern_t *p, const matrix_t t)
+        -:   18:{
+        3:   19:    if (p == NULL)
+        -:   20:    {
+    #####:   21:        return;
+        -:   22:    }
+        -:   23:
+        3:   24:    p->transform         = t;
+        3:   25:    p->inverse_transform = matrix_inverse(t);
+        3:   26:}
+        -:   27:
+       35:   28:tuple_t pattern_at(const pattern_t p, const tuple_t point)
+        -:   29:{
+       35:   30:    switch (p.type)
+        -:   31:    {
+        -:   32:    case PATTERN_TEST:
+        4:   33:        return color(point.x, point.y, point.z);
+        -:   34:
+        -:   35:    case PATTERN_STRIPE:
+       14:   36:        if ((int)floor(point.x) % 2 == 0)
+        -:   37:        {
+       10:   38:            return p.a;
+        -:   39:        }
+        -:   40:        else
+        -:   41:        {
+        4:   42:            return p.b;
+        -:   43:        }
+        -:   44:
+        -:   45:    case PATTERN_GRADIENT:
+        -:   46:    {
+        4:   47:        tuple_t distance = tuple_subtract(p.b, p.a);
+        4:   48:        double fraction  = point.x - floor(point.x);
+        4:   49:        return tuple_add(p.a, tuple_scale(distance, fraction));
+        4:   50:    }
+        -:   51:
+        -:   52:    case PATTERN_RING:
+        4:   53:        if ((int)floor(sqrt(point.x * point.x + point.z * point.z)) % 2 == 0)
+        -:   54:        {
+        1:   55:            return p.a;
+        -:   56:        }
+        -:   57:        else
+        -:   58:        {
+        3:   59:            return p.b;
+        -:   60:        }
+        -:   61:
+        -:   62:    case PATTERN_CHECKER:
+        -:   63:    {
+        9:   64:        int sum = (int)(floor(point.x) + floor(point.y) + floor(point.z));
+        9:   65:        if (sum % 2 == 0)
+        -:   66:        {
+        6:   67:            return p.a;
+        -:   68:        }
+        -:   69:        else
+        -:   70:        {
+        3:   71:            return p.b;
+        -:   72:        }
+        9:   73:    }
+        -:   74:
+        -:   75:    default:
+    #####:   76:        return BLACK;
+        -:   77:    }
+       35:   78:}
+        -:   79:
+        6:   80:pattern_t patterns_test(void)
+        -:   81:{
+        6:   82:    return pattern(PATTERN_TEST);
+        -:   83:}
+        -:   84:
+        5:   85:pattern_t patterns_stripe(const tuple_t a, const tuple_t b)
+        -:   86:{
+        5:   87:    pattern_t p = pattern(PATTERN_STRIPE);
+        5:   88:    p.a         = a;
+        5:   89:    p.b         = b;
+        5:   90:    return p;
+        -:   91:}
+        -:   92:
+        1:   93:pattern_t patterns_gradient(const tuple_t a, const tuple_t b)
+        -:   94:{
+        1:   95:    pattern_t p = pattern(PATTERN_GRADIENT);
+        1:   96:    p.a         = a;
+        1:   97:    p.b         = b;
+        1:   98:    return p;
+        -:   99:}
+        -:  100:
+        1:  101:pattern_t patterns_ring(const tuple_t a, const tuple_t b)
+        -:  102:{
+        1:  103:    pattern_t p = pattern(PATTERN_RING);
+        1:  104:    p.a         = a;
+        1:  105:    p.b         = b;
+        1:  106:    return p;
+        -:  107:}
+        -:  108:
+        1:  109:pattern_t patterns_checker(const tuple_t a, const tuple_t b)
+        -:  110:{
+        1:  111:    pattern_t p = pattern(PATTERN_CHECKER);
+        1:  112:    p.a         = a;
+        1:  113:    p.b         = b;
+        1:  114:    return p;
+        -:  115:}

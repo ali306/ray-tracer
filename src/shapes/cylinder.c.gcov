@@ -1,0 +1,90 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/cylinder.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/cylinder.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/cylinder.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/shapes.h"
+        -:    2:#include <float.h>
+        -:    3:#include <math.h>
+        -:    4:
+       10:    5:static bool check_cap(ray_t ray, double t)
+        -:    6:{
+       10:    7:    double x = ray.origin.x + t * ray.direction.x;
+       10:    8:    double z = ray.origin.z + t * ray.direction.z;
+       20:    9:    return (x * x + z * z) <= 1.0;
+       10:   10:}
+        -:   11:
+       10:   12:static void intersect_caps(const cylinder_t *cyl, ray_t ray,
+        -:   13:                           intersections_t *xs)
+        -:   14:{
+       10:   15:    if (!cyl->closed || fabs(ray.direction.y) < EPSILON)
+        -:   16:    {
+        5:   17:        return;
+        -:   18:    }
+        -:   19:
+        5:   20:    double t = (cyl->minimum - ray.origin.y) / ray.direction.y;
+        5:   21:    if (check_cap(ray, t))
+        -:   22:    {
+        4:   23:        xs->intersections[xs->count++] = intersection(t, (void *)cyl);
+        4:   24:    }
+        -:   25:
+        5:   26:    t = (cyl->maximum - ray.origin.y) / ray.direction.y;
+        5:   27:    if (check_cap(ray, t))
+        -:   28:    {
+        4:   29:        xs->intersections[xs->count++] = intersection(t, (void *)cyl);
+        4:   30:    }
+       10:   31:}
+        -:   32:
+       26:   33:cylinder_t cylinder(void)
+        -:   34:{
+        -:   35:    cylinder_t c;
+       26:   36:    c.minimum = -DBL_MAX;
+       26:   37:    c.maximum = DBL_MAX;
+       26:   38:    c.closed  = false;
+       26:   39:    shape((shape_t *)&c, SHAPE_CYLINDER);
+       26:   40:    return c;
+        -:   41:}
+        -:   42:
+       10:   43:intersections_t cylinder_intersect(const cylinder_t *c, ray_t r)
+        -:   44:{
+        -:   45:    intersections_t result;
+       10:   46:    result.count = 0;
+        -:   47:
+       10:   48:    if (c == NULL)
+        -:   49:    {
+    #####:   50:        return result;
+        -:   51:    }
+        -:   52:
+       10:   53:    double a = r.direction.x * r.direction.x + r.direction.z * r.direction.z;
+        -:   54:
+       10:   55:    if (fabs(a) >= EPSILON)
+        -:   56:    {
+       14:   57:        double b = 2.0 * r.origin.x * r.direction.x +
+        7:   58:                   2.0 * r.origin.z * r.direction.z;
+        7:   59:        double c_coef = r.origin.x * r.origin.x + r.origin.z * r.origin.z - 1.0;
+        -:   60:
+        7:   61:        double disc = b * b - 4.0 * a * c_coef;
+        -:   62:
+        7:   63:        if (disc >= 0.0)
+        -:   64:        {
+        7:   65:            double sqrt_disc = sqrt(disc);
+        7:   66:            double t0        = (-b - sqrt_disc) / (2.0 * a);
+        7:   67:            double t1        = (-b + sqrt_disc) / (2.0 * a);
+        -:   68:
+        7:   69:            double y0 = r.origin.y + t0 * r.direction.y;
+        7:   70:            if (c->minimum < y0 && y0 < c->maximum)
+        -:   71:            {
+        3:   72:                result.intersections[result.count++] = intersection(t0, (void *)c);
+        3:   73:            }
+        -:   74:
+        7:   75:            double y1 = r.origin.y + t1 * r.direction.y;
+        7:   76:            if (c->minimum < y1 && y1 < c->maximum)
+        -:   77:            {
+        5:   78:                result.intersections[result.count++] = intersection(t1, (void *)c);
+        5:   79:            }
+        7:   80:        }
+        7:   81:    }
+        -:   82:
+       10:   83:    intersect_caps(c, r, &result);
+        -:   84:
+        -:   85:    return result;
+       10:   86:}

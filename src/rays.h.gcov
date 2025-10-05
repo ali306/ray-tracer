@@ -1,0 +1,37 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/include/rays.h
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/world.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/world.c.gcda
+        -:    0:Runs:1
+        -:    1:// rays.h
+        -:    2:
+        -:    3:#ifndef RAYS_H
+        -:    4:#define RAYS_H
+        -:    5:
+        -:    6:#include "../include/transformations.h"
+        -:    7:#include "../include/tuples.h"
+        -:    8:#include <assert.h>
+        -:    9:#include <stdio.h>
+        -:   10:#include <stdlib.h>
+        -:   11:
+        -:   12:typedef struct
+        -:   13:{
+        -:   14:    tuple_t origin;
+        -:   15:    tuple_t direction;
+        -:   16:} ray_t;
+        -:   17:
+       87:   18:static inline ray_t ray(const tuple_t origin, const tuple_t direction)
+        -:   19:{
+       87:   20:    return (ray_t){origin, direction};
+        -:   21:}
+        -:   22:
+        -:   23:static inline tuple_t ray_position(const ray_t ray, const double t)
+        -:   24:{
+        -:   25:    return tuple_add(ray.origin, tuple_scale(ray.direction, t));
+        -:   26:}
+        -:   27:
+        -:   28:static inline ray_t ray_transform(ray_t r, matrix_t m)
+        -:   29:{
+        -:   30:    return ray(matrix_tmul(m, r.origin), matrix_tmul(m, r.direction));
+        -:   31:}
+        -:   32:
+        -:   33:#endif

@@ -1,0 +1,286 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/shapes.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/shapes.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../include/shapes.h"
+        -:    2:#include "../include/bounds.h"
+        -:    3:#include "../include/patterns.h"
+        -:    4:#include <math.h>
+        -:    5:#include <stdio.h>
+        -:    6:#include <stdlib.h>
+        -:    7:
+      178:    8:void shape(shape_t *s, const shape_type_t t)
+        -:    9:{
+      178:   10:    if (s == NULL)
+        -:   11:    {
+    #####:   12:        return;
+        -:   13:    }
+        -:   14:
+      178:   15:    s->type                         = t;
+      178:   16:    s->transform                    = IDENTITY;
+      178:   17:    s->inverse_transform            = IDENTITY;
+      178:   18:    s->transposed_inverse_transform = IDENTITY;
+      178:   19:    s->material                     = material();
+      178:   20:    s->parent                       = NULL;
+        -:   21:
+      178:   22:    bounding_box_t local_bounds = bounds_of(s);
+      178:   23:    s->world_bounds             = local_bounds;
+      178:   24:    s->world_bounds_cached      = true;
+      178:   25:}
+        -:   26:
+       63:   27:void shape_set_transform(shape_t *s, const matrix_t m)
+        -:   28:{
+       63:   29:    if (s == NULL)
+        -:   30:    {
+    #####:   31:        return;
+        -:   32:    }
+        -:   33:
+       63:   34:    s->transform                      = m;
+       63:   35:    s->inverse_transform              = matrix_inverse(m);
+       63:   36:    s->transposed_inverse_transform   = matrix_transpose(s->inverse_transform);
+        -:   37:
+       63:   38:    bounding_box_t local_bounds = bounds_of(s);
+       63:   39:    s->world_bounds             = bounds_transform(local_bounds, m);
+       63:   40:    s->world_bounds_cached      = true;
+       63:   41:}
+        -:   42:
+       77:   43:tuple_t shape_normal_at(const shape_t *s, const tuple_t world_point,
+        -:   44:                        const intersection_t *hit)
+        -:   45:{
+       77:   46:    if (s == NULL)
+        -:   47:    {
+    #####:   48:        return vector(0, 1, 0);
+        -:   49:    }
+        -:   50:
+       77:   51:    tuple_t object_point = world_to_object(s, world_point);
+       77:   52:    tuple_t object_normal;
+        -:   53:
+       77:   54:    switch (s->type)
+        -:   55:    {
+        -:   56:    case SHAPE_SPHERE:
+        -:   57:    {
+       40:   58:        object_normal = tuple_subtract(object_point, point(0, 0, 0));
+        -:   59:    }
+       40:   60:    break;
+        -:   61:    case SHAPE_PLANE:
+       14:   62:        object_normal = vector(0, 1, 0);
+       14:   63:        break;
+        -:   64:    case SHAPE_CUBE:
+        -:   65:    {
+        8:   66:        double abs_x = fabs(object_point.x);
+        8:   67:        double abs_y = fabs(object_point.y);
+        8:   68:        double abs_z = fabs(object_point.z);
+        -:   69:
+        8:   70:        double max_c = fmax(fmax(abs_x, abs_y), abs_z);
+        -:   71:
+        8:   72:        if (fabs(abs_x - max_c) < EPSILON)
+        -:   73:        {
+        4:   74:            object_normal = vector(object_point.x, 0, 0);
+        4:   75:        }
+        4:   76:        else if (fabs(abs_y - max_c) < EPSILON)
+        -:   77:        {
+        2:   78:            object_normal = vector(0, object_point.y, 0);
+        2:   79:        }
+        -:   80:        else
+        -:   81:        {
+        2:   82:            object_normal = vector(0, 0, object_point.z);
+        -:   83:        }
+        8:   84:    }
+        8:   85:    break;
+        -:   86:    case SHAPE_CYLINDER:
+        -:   87:    {
+       10:   88:        cylinder_t *cyl = (cylinder_t *)s;
+       20:   89:        double dist     = object_point.x * object_point.x +
+       10:   90:                      object_point.z * object_point.z;
+        -:   91:
+       10:   92:        if (dist < 1.0 && object_point.y >= cyl->maximum - EPSILON)
+        -:   93:        {
+        3:   94:            object_normal = vector(0, 1, 0);
+        3:   95:        }
+        7:   96:        else if (dist < 1.0 && object_point.y <= cyl->minimum + EPSILON)
+        -:   97:        {
+        3:   98:            object_normal = vector(0, -1, 0);
+        3:   99:        }
+        -:  100:        else
+        -:  101:        {
+        4:  102:            object_normal = vector(object_point.x, 0, object_point.z);
+        -:  103:        }
+       10:  104:    }
+       10:  105:    break;
+        -:  106:    case SHAPE_CONE:
+        -:  107:    {
+    #####:  108:        cone_t *cone = (cone_t *)s;
+    #####:  109:        double dist  = object_point.x * object_point.x +
+    #####:  110:                      object_point.z * object_point.z;
+    #####:  111:        double y_squared = object_point.y * object_point.y;
+        -:  112:
+    #####:  113:        if (dist < y_squared && object_point.y >= cone->maximum - EPSILON)
+        -:  114:        {
+    #####:  115:            object_normal = vector(0, 1, 0);
+    #####:  116:        }
+    #####:  117:        else if (dist < y_squared && object_point.y <= cone->minimum + EPSILON)
+        -:  118:        {
+    #####:  119:            object_normal = vector(0, -1, 0);
+    #####:  120:        }
+        -:  121:        else
+        -:  122:        {
+    #####:  123:            double y = sqrt(dist);
+    #####:  124:            if (object_point.y > 0.0)
+        -:  125:            {
+    #####:  126:                y = -y;
+    #####:  127:            }
+    #####:  128:            object_normal = vector(object_point.x, y, object_point.z);
+    #####:  129:        }
+    #####:  130:    }
+    #####:  131:    break;
+        -:  132:    case SHAPE_TRIANGLE:
+        -:  133:    {
+        3:  134:        triangle_t *tri = (triangle_t *)s;
+        3:  135:        object_normal   = tri->normal;
+        3:  136:    }
+        3:  137:    break;
+        -:  138:    case SHAPE_SMOOTH_TRIANGLE:
+        -:  139:    {
+        2:  140:        smooth_triangle_t *tri = (smooth_triangle_t *)s;
+        2:  141:        if (hit != NULL)
+        -:  142:        {
+        2:  143:            double w      = 1.0 - hit->u - hit->v;
+        6:  144:            object_normal = tuple_add(tuple_add(tuple_scale(tri->n2, hit->u),
+        2:  145:                                                tuple_scale(tri->n3, hit->v)),
+        2:  146:                                      tuple_scale(tri->n1, w));
+        2:  147:        }
+        -:  148:        else
+        -:  149:        {
+    #####:  150:            object_normal = tri->normal;
+        -:  151:        }
+        2:  152:    }
+        2:  153:    break;
+        -:  154:    case SHAPE_GROUP:
+    #####:  155:        object_normal = vector(0, 1, 0);
+    #####:  156:        break;
+        -:  157:    default:
+    #####:  158:        object_normal = tuple_normalize(
+    #####:  159:            vector(object_point.x, object_point.y, object_point.z));
+    #####:  160:    }
+        -:  161:
+       77:  162:    return normal_to_world(s, object_normal);
+       77:  163:}
+        -:  164:
+        1:  165:tuple_t normal_at(const void *shape, const tuple_t world_point,
+        -:  166:                  const intersection_t *hit)
+        -:  167:{
+        1:  168:    if (shape == NULL)
+        -:  169:    {
+    #####:  170:        return vector(0, 1, 0);
+        -:  171:    }
+        -:  172:
+        1:  173:    return shape_normal_at((const shape_t *)shape, world_point, hit);
+        1:  174:}
+        -:  175:
+      481:  176:__attribute__((hot)) intersections_t shape_intersect(const shape_t *s,
+        -:  177:                                                     const ray_t r)
+        -:  178:{
+      481:  179:    if (__builtin_expect(s == NULL, 0))
+        -:  180:    {
+    #####:  181:        return empty_intersections();
+        -:  182:    }
+        -:  183:
+      481:  184:    if (!bounds_intersects(s->world_bounds, r))
+        -:  185:    {
+      296:  186:        return empty_intersections();
+        -:  187:    }
+        -:  188:
+      185:  189:    ray_t local_ray = ray_transform(r, s->inverse_transform);
+        -:  190:
+      185:  191:    switch (s->type)
+        -:  192:    {
+        -:  193:    case SHAPE_SPHERE:
+      120:  194:        return sphere_intersect((sphere_t *)s, local_ray);
+        -:  195:    case SHAPE_PLANE:
+       37:  196:        return plane_intersect((plane_t *)s, local_ray);
+        -:  197:    case SHAPE_CUBE:
+        7:  198:        return cube_intersect((cube_t *)s, local_ray);
+        -:  199:    case SHAPE_CYLINDER:
+       10:  200:        return cylinder_intersect((cylinder_t *)s, local_ray);
+        -:  201:    case SHAPE_CONE:
+        7:  202:        return cone_intersect((cone_t *)s, local_ray);
+        -:  203:    case SHAPE_TRIANGLE:
+    #####:  204:        return triangle_intersect((triangle_t *)s, local_ray);
+        -:  205:    case SHAPE_SMOOTH_TRIANGLE:
+    #####:  206:        return smooth_triangle_intersect((smooth_triangle_t *)s, local_ray);
+        -:  207:    case SHAPE_GROUP:
+        3:  208:        return group_intersect((group_t *)s, local_ray);
+        -:  209:    case SHAPE_TEST:
+        1:  210:        return test_shape_intersect((test_shape_t *)s, local_ray);
+        -:  211:    }
+    #####:  212:    __builtin_unreachable();
+      481:  213:}
+        -:  214:
+        6:  215:tuple_t pattern_at_shape(pattern_t p, shape_t o, tuple_t world_point)
+        -:  216:{
+        6:  217:    tuple_t object_point  = matrix_tmul(o.inverse_transform, world_point);
+        6:  218:    tuple_t pattern_point = matrix_tmul(p.inverse_transform, object_point);
+        6:  219:    return pattern_at(p, pattern_point);
+        6:  220:}
+        -:  221:
+       82:  222:tuple_t world_to_object(const shape_t *shape, tuple_t point)
+        -:  223:{
+       82:  224:    if (shape == NULL)
+        -:  225:    {
+    #####:  226:        return point;
+        -:  227:    }
+        -:  228:
+       82:  229:    if (shape->parent != NULL)
+        -:  230:    {
+        4:  231:        point = world_to_object((shape_t *)shape->parent, point);
+        4:  232:    }
+        -:  233:
+       82:  234:    return matrix_tmul(shape->inverse_transform, point);
+       82:  235:}
+        -:  236:
+       82:  237:tuple_t normal_to_world(const shape_t *shape, tuple_t normal)
+        -:  238:{
+       82:  239:    if (shape == NULL)
+        -:  240:    {
+    #####:  241:        return normal;
+        -:  242:    }
+        -:  243:
+       82:  244:    normal   = matrix_tmul(shape->transposed_inverse_transform, normal);
+       82:  245:    normal.w = 0;
+       82:  246:    normal   = tuple_normalize(normal);
+        -:  247:
+       82:  248:    if (shape->parent != NULL)
+        -:  249:    {
+        4:  250:        normal = normal_to_world((shape_t *)shape->parent, normal);
+        4:  251:    }
+        -:  252:
+       82:  253:    return normal;
+       82:  254:}
+        -:  255:
+        3:  256:test_shape_t test_shape(void)
+        -:  257:{
+        -:  258:    test_shape_t t;
+        3:  259:    t.type                         = SHAPE_TEST;
+        3:  260:    t.transform                    = IDENTITY;
+        3:  261:    t.inverse_transform            = IDENTITY;
+        3:  262:    t.transposed_inverse_transform = IDENTITY;
+        3:  263:    t.material                     = material();
+        3:  264:    t.parent                       = NULL;
+        3:  265:    t.has_saved_ray                = false;
+        3:  266:    t.world_bounds                 = bounding_box(point(-1, -1, -1), point(1, 1, 1));
+        3:  267:    t.world_bounds_cached          = true;
+        3:  268:    return t;
+        -:  269:}
+        -:  270:
+        1:  271:intersections_t test_shape_intersect(test_shape_t *t, ray_t r)
+        -:  272:{
+        1:  273:    if (t == NULL)
+        -:  274:    {
+    #####:  275:        return empty_intersections();
+        -:  276:    }
+        -:  277:
+        1:  278:    t->saved_ray     = r;
+        1:  279:    t->has_saved_ray = true;
+        -:  280:
+        1:  281:    return empty_intersections();
+        1:  282:}

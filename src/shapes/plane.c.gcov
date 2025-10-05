@@ -1,0 +1,12 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/shapes/plane.c
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/plane.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/plane.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../../include/shapes.h"
+        -:    2:
+       13:    3:plane_t plane(void)
+        -:    4:{
+        -:    5:    plane_t p;
+       13:    6:    shape(&p, SHAPE_PLANE);
+       13:    7:    return p;
+        -:    8:}

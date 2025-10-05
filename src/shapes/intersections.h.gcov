@@ -1,0 +1,67 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/include/intersections.h
+        -:    0:Graph:../../build/CMakeFiles/main_lib.dir/src/shapes/triangle.c.gcno
+        -:    0:Data:../../build/CMakeFiles/main_lib.dir/src/shapes/triangle.c.gcda
+        -:    0:Runs:1
+        -:    1:// intersections.h
+        -:    2:
+        -:    3:#ifndef INTERSECTIONS_H
+        -:    4:#define INTERSECTIONS_H
+        -:    5:
+        -:    6:#include "../include/rays.h"
+        -:    7:#include "../include/tuples.h"
+        -:    8:#include "config.h"
+        -:    9:#include <assert.h>
+        -:   10:
+        -:   11:typedef struct
+        -:   12:{
+        -:   13:    double t;
+        -:   14:    void *object;
+        -:   15:    double u;
+        -:   16:    double v;
+        -:   17:} intersection_t;
+        -:   18:
+        -:   19:typedef struct
+        -:   20:{
+        -:   21:    int count;
+        -:   22:    intersection_t intersections[MAX_INTERSECTIONS];
+        -:   23:} intersections_t;
+        -:   24:
+        -:   25:typedef struct
+        -:   26:{
+        -:   27:    double t;
+        -:   28:    void *object;
+        -:   29:    tuple_t point;
+        -:   30:    tuple_t eyev;
+        -:   31:    tuple_t normalv;
+        -:   32:    tuple_t reflectv;
+        -:   33:    bool inside;
+        -:   34:    tuple_t over_point;
+        -:   35:    tuple_t under_point;
+        -:   36:    double n1;
+        -:   37:    double n2;
+        -:   38:} computations_t;
+        -:   39:
+        -:   40:intersection_t intersection(double t, void *object);
+        -:   41:
+        -:   42:intersection_t intersection_with_uv(double t, void *object, double u, double v);
+        -:   43:
+        -:   44:intersections_t intersections(int count, ...);
+        -:   45:
+        -:   46:intersection_t *intersections_hit(const intersections_t *xs);
+        -:   47:
+        -:   48:computations_t intersections_prepare_computations(const intersection_t *i,
+        -:   49:                                                  const ray_t *r,
+        -:   50:                                                  const intersections_t *xs);
+        -:   51:
+        -:   52:double intersections_shlick(const computations_t *c);
+        -:   53:
+        -:   54:void intersections_sort(intersections_t *xs);
+        -:   55:
+        4:   56:static inline intersections_t empty_intersections(void)
+        -:   57:{
+        -:   58:    intersections_t result;
+        4:   59:    result.count = 0;
+        4:   60:    return result;
+        -:   61:}
+        -:   62:
+        -:   63:#endif

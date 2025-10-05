@@ -1,0 +1,439 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/world.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/world.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/world.c.gcda
+        -:    0:Runs:1
+        -:    1:// world.c
+        -:    2:
+        -:    3:#include "../include/world.h"
+        -:    4:#include "../include/dynamic_array.h"
+        -:    5:#include <stddef.h>
+        -:    6:#include <stdio.h>
+        -:    7:#include <stdlib.h>
+        -:    8:#include <string.h>
+        -:    9:
+       22:   10:world_t world(void)
+        -:   11:{
+       22:   12:    world_t w         = {0};
+       22:   13:    w.object_capacity = 25000;
+       22:   14:    w.objects         = malloc(w.object_capacity * sizeof(object_t));
+       22:   15:    if (!w.objects)
+        -:   16:    {
+    #####:   17:        fprintf(stderr, "Error: Failed to allocate memory for world objects\n");
+    #####:   18:        exit(EXIT_FAILURE);
+        -:   19:    }
+       22:   20:    w.object_count = 0;
+        -:   21:
+       22:   22:    w.light_capacity = 16;
+       22:   23:    w.lights         = malloc(w.light_capacity * sizeof(light_t));
+       22:   24:    if (!w.lights)
+        -:   25:    {
+    #####:   26:        fprintf(stderr, "Error: Failed to allocate memory for world lights\n");
+    #####:   27:        free(w.objects);
+    #####:   28:        exit(EXIT_FAILURE);
+        -:   29:    }
+       22:   30:    w.light_count = 0;
+        -:   31:
+       22:   32:    return w;
+        -:   33:}
+        -:   34:
+       19:   35:world_t world_default(void)
+        -:   36:{
+       19:   37:    world_t w = world();
+       19:   38:    world_add_light(&w, lights_point_light(point(-10, 10, -10), color(1, 1, 1)));
+        -:   39:
+       19:   40:    sphere_t s1          = sphere();
+       19:   41:    s1.material.color    = color(0.8, 1.0, 0.6);
+       19:   42:    s1.material.diffuse  = 0.7;
+       19:   43:    s1.material.specular = 0.2;
+       19:   44:    world_add_shape(&w, s1);
+        -:   45:
+       19:   46:    sphere_t s2 = sphere();
+       19:   47:    shape_set_transform(&s2, transform_scaling(0.5, 0.5, 0.5));
+       19:   48:    world_add_shape(&w, s2);
+        -:   49:
+        -:   50:    return w;
+       19:   51:}
+        -:   52:
+       22:   53:void world_free(world_t *w)
+        -:   54:{
+       22:   55:    if (w)
+        -:   56:    {
+       22:   57:        if (w->objects)
+        -:   58:        {
+       69:   59:            for (unsigned i = 0; i < w->object_count; i++)
+        -:   60:            {
+       47:   61:                if (w->objects[i].shape.type == SHAPE_GROUP)
+        -:   62:                {
+    #####:   63:                    group_t *g = &w->objects[i].group;
+    #####:   64:                    if (g->children != NULL)
+        -:   65:                    {
+    #####:   66:                        for (unsigned j = 0; j < g->child_count; j++)
+        -:   67:                        {
+    #####:   68:                            if (g->children[j] != NULL)
+        -:   69:                            {
+    #####:   70:                                if (g->children[j]->type == SHAPE_GROUP)
+        -:   71:                                {
+    #####:   72:                                    group_free((group_t *)g->children[j]);
+    #####:   73:                                }
+        -:   74:                                else
+        -:   75:                                {
+    #####:   76:                                    free(g->children[j]);
+        -:   77:                                }
+    #####:   78:                            }
+    #####:   79:                        }
+    #####:   80:                        free(g->children);
+    #####:   81:                        g->children = NULL;
+    #####:   82:                    }
+    #####:   83:                }
+       47:   84:            }
+        -:   85:
+       22:   86:            free(w->objects);
+       22:   87:            w->objects         = NULL;
+       22:   88:            w->object_count    = 0;
+       22:   89:            w->object_capacity = 0;
+       22:   90:        }
+        -:   91:
+       22:   92:        if (w->lights)
+        -:   93:        {
+       22:   94:            free(w->lights);
+       22:   95:            w->lights        = NULL;
+       22:   96:            w->light_count   = 0;
+       22:   97:            w->light_capacity = 0;
+       22:   98:        }
+       22:   99:    }
+       22:  100:}
+        -:  101:
+       47:  102:static bool world_ensure_capacity(world_t *w)
+        -:  103:{
+       47:  104:    if (!w || !w->objects)
+        -:  105:    {
+    #####:  106:        return false;
+        -:  107:    }
+        -:  108:
+       47:  109:    if (w->object_count >= w->object_capacity &&
+    #####:  110:        w->object_capacity >= MAX_NUM_OBJECTS)
+        -:  111:    {
+    #####:  112:        printf("Warning: Reached maximum object limit (%d), cannot add more "
+        -:  113:               "objects\n",
+        -:  114:               MAX_NUM_OBJECTS);
+    #####:  115:        return false;
+        -:  116:    }
+        -:  117:
+       47:  118:    DYN_ARRAY_ENSURE_CAPACITY_IMPL(w->objects, w->object_count,
+        -:  119:                                   w->object_capacity, object_t,
+        -:  120:                                   MAX_NUM_OBJECTS);
+       47:  121:    return true;
+       47:  122:}
+        -:  123:
+       47:  124:void world_add_shape(world_t *w, shape_t s)
+        -:  125:{
+       47:  126:    if (!world_ensure_capacity(w))
+        -:  127:    {
+    #####:  128:        return;
+        -:  129:    }
+       47:  130:    w->objects[w->object_count].shape = s;
+       47:  131:    w->object_count++;
+       47:  132:}
+        -:  133:
+    #####:  134:void world_add_cylinder(world_t *w, cylinder_t c)
+        -:  135:{
+    #####:  136:    if (!world_ensure_capacity(w))
+        -:  137:    {
+    #####:  138:        return;
+        -:  139:    }
+    #####:  140:    w->objects[w->object_count].cylinder = c;
+    #####:  141:    w->object_count++;
+    #####:  142:}
+        -:  143:
+    #####:  144:void world_add_triangle(world_t *w, triangle_t t)
+        -:  145:{
+    #####:  146:    if (!world_ensure_capacity(w))
+        -:  147:    {
+    #####:  148:        return;
+        -:  149:    }
+    #####:  150:    w->objects[w->object_count].triangle = t;
+    #####:  151:    w->object_count++;
+    #####:  152:}
+        -:  153:
+    #####:  154:void world_add_smooth_triangle(world_t *w, smooth_triangle_t t)
+        -:  155:{
+    #####:  156:    if (!world_ensure_capacity(w))
+        -:  157:    {
+    #####:  158:        return;
+        -:  159:    }
+    #####:  160:    w->objects[w->object_count].smooth_triangle = t;
+    #####:  161:    w->object_count++;
+    #####:  162:}
+        -:  163:
+    #####:  164:void world_add_group(world_t *w, group_t *g)
+        -:  165:{
+    #####:  166:    if (!world_ensure_capacity(w))
+        -:  167:    {
+    #####:  168:        group_free(g);
+    #####:  169:        return;
+        -:  170:    }
+    #####:  171:    w->objects[w->object_count].group = *g;
+    #####:  172:    group_t *copied_group             = &w->objects[w->object_count].group;
+        -:  173:
+    #####:  174:    for (unsigned i = 0; i < copied_group->child_count; i++)
+        -:  175:    {
+    #####:  176:        if (copied_group->children[i] != NULL)
+        -:  177:        {
+    #####:  178:            copied_group->children[i]->parent = copied_group;
+    #####:  179:        }
+    #####:  180:    }
+        -:  181:
+    #####:  182:    w->object_count++;
+    #####:  183:    free(g);
+    #####:  184:}
+        -:  185:
+       21:  186:void world_add_light(world_t *w, light_t light)
+        -:  187:{
+       21:  188:    if (!w || !w->lights)
+        -:  189:    {
+    #####:  190:        return;
+        -:  191:    }
+        -:  192:
+       21:  193:    if (w->light_count >= w->light_capacity)
+        -:  194:    {
+    #####:  195:        unsigned new_capacity = w->light_capacity * 2;
+    #####:  196:        light_t *new_lights =
+    #####:  197:            realloc(w->lights, new_capacity * sizeof(light_t));
+    #####:  198:        if (!new_lights)
+        -:  199:        {
+    #####:  200:            fprintf(stderr, "Error: Failed to reallocate memory for lights\n");
+    #####:  201:            return;
+        -:  202:        }
+    #####:  203:        w->lights        = new_lights;
+    #####:  204:        w->light_capacity = new_capacity;
+    #####:  205:    }
+        -:  206:
+       21:  207:    w->lights[w->light_count] = light;
+       21:  208:    w->light_count++;
+       21:  209:}
+        -:  210:
+      213:  211:void world_intersect(const world_t *w, const ray_t *r, intersections_t *out)
+        -:  212:{
+      213:  213:    if (w == NULL || r == NULL || out == NULL)
+        -:  214:    {
+        2:  215:        if (out != NULL)
+        -:  216:        {
+    #####:  217:            out->count = 0;
+    #####:  218:        }
+    #####:  219:        return;
+        -:  220:    }
+        -:  221:
+      211:  222:    out->count = 0;
+        -:  223:
+      644:  224:    for (size_t i = 0; i < w->object_count; i++)
+        -:  225:    {
+      433:  226:        shape_t *shape;
+        -:  227:
+      433:  228:        switch (w->objects[i].shape.type)
+        -:  229:        {
+        -:  230:        case SHAPE_SPHERE:
+      396:  231:            shape = (shape_t *)&w->objects[i].sphere;
+      396:  232:            break;
+        -:  233:        case SHAPE_PLANE:
+       37:  234:            shape = (shape_t *)&w->objects[i].plane;
+       37:  235:            break;
+        -:  236:        case SHAPE_CUBE:
+    #####:  237:            shape = (shape_t *)&w->objects[i].cube;
+    #####:  238:            break;
+        -:  239:        case SHAPE_TRIANGLE:
+    #####:  240:            shape = (shape_t *)&w->objects[i].triangle;
+    #####:  241:            break;
+        -:  242:        case SHAPE_SMOOTH_TRIANGLE:
+    #####:  243:            shape = (shape_t *)&w->objects[i].smooth_triangle;
+    #####:  244:            break;
+        -:  245:        case SHAPE_GROUP:
+    #####:  246:            shape = (shape_t *)&w->objects[i].group;
+    #####:  247:            break;
+        -:  248:        default:
+    #####:  249:            shape = &w->objects[i].shape;
+    #####:  250:            break;
+        -:  251:        }
+      433:  252:        intersections_t xs = shape_intersect(shape, *r);
+        -:  253:
+      433:  254:        if (xs.count > 0)
+        -:  255:        {
+      131:  256:            int space_left = MAX_INTERSECTIONS - out->count;
+      131:  257:            int to_copy    = 0;
+        -:  258:
+      131:  259:            if (space_left > 0)
+        -:  260:            {
+      131:  261:                to_copy = (xs.count <= space_left) ? xs.count : space_left;
+      131:  262:                memcpy(&out->intersections[out->count], xs.intersections,
+        -:  263:                       (size_t)to_copy * sizeof(intersection_t));
+      131:  264:                out->count += to_copy;
+      131:  265:            }
+        -:  266:
+      131:  267:            if (out->count == MAX_INTERSECTIONS)
+        -:  268:            {
+    #####:  269:                intersections_sort(out);
+        -:  270:
+    #####:  271:                for (int j = to_copy; j < xs.count; j++)
+        -:  272:                {
+    #####:  273:                    if (xs.intersections[j].t <
+    #####:  274:                        out->intersections[MAX_INTERSECTIONS - 1].t)
+        -:  275:                    {
+    #####:  276:                        out->intersections[MAX_INTERSECTIONS - 1] =
+    #####:  277:                            xs.intersections[j];
+    #####:  278:                        intersections_sort(out);
+    #####:  279:                    }
+    #####:  280:                }
+    #####:  281:            }
+      131:  282:        }
+      433:  283:    }
+        -:  284:
+      211:  285:    if (out->count > 1)
+        -:  286:    {
+       78:  287:        intersections_sort(out);
+       78:  288:    }
+      211:  289:}
+        -:  290:
+       25:  291:tuple_t world_shade_hit(const world_t *w, const computations_t *c,
+        -:  292:                        const unsigned remaining)
+        -:  293:{
+       25:  294:    if (w == NULL || c == NULL)
+        -:  295:    {
+    #####:  296:        return color(0, 0, 0);
+        -:  297:    }
+        -:  298:
+       25:  299:    shape_t *o      = (shape_t *)c->object;
+       25:  300:    tuple_t surface = color(0, 0, 0);
+        -:  301:
+        -:  302:    // Sum contributions from all lights
+       50:  303:    for (unsigned i = 0; i < w->light_count; i++)
+        -:  304:    {
+       50:  305:        double intensity =
+       25:  306:            lights_intensity_at((light_t *)&w->lights[i], c->over_point, w);
+        -:  307:
+       25:  308:        tuple_t light_contribution =
+       50:  309:            materials_lighting(&o->material, o, &w->lights[i], c->over_point,
+       25:  310:                               c->eyev, c->normalv, intensity);
+        -:  311:
+       25:  312:        surface = tuple_add(surface, light_contribution);
+       25:  313:    }
+        -:  314:
+       25:  315:    tuple_t reflected = world_reflected_color(w, c, remaining);
+       25:  316:    tuple_t refracted = world_refracted_color(w, c, remaining);
+        -:  317:
+       25:  318:    material_t m = o->material;
+        -:  319:
+       25:  320:    if (m.reflective > 0 && m.transparency > 0)
+        -:  321:    {
+        1:  322:        double reflectance = intersections_shlick(c);
+        1:  323:        return tuple_add(surface,
+        2:  324:                         tuple_add(tuple_scale(reflected, reflectance),
+        1:  325:                                   tuple_scale(refracted, 1 - reflectance)));
+        1:  326:    }
+        -:  327:
+       24:  328:    return tuple_add(tuple_add(surface, reflected), refracted);
+       25:  329:}
+        -:  330:
+      136:  331:tuple_t world_color_at(const world_t *w, const ray_t *r,
+        -:  332:                       const unsigned remaining)
+        -:  333:{
+      136:  334:    if (w == NULL || r == NULL)
+        -:  335:    {
+    #####:  336:        return color(0, 0, 0);
+        -:  337:    }
+        -:  338:
+      136:  339:    intersections_t xs;
+      136:  340:    world_intersect(w, r, &xs);
+      136:  341:    if (intersections_hit(&xs) == NULL)
+        -:  342:    {
+      117:  343:        return color(0, 0, 0);
+        -:  344:    }
+       19:  345:    intersection_t hit   = *intersections_hit(&xs);
+       19:  346:    computations_t comps = intersections_prepare_computations(&hit, r, &xs);
+       19:  347:    return world_shade_hit(w, &comps, remaining);
+      136:  348:}
+        -:  349:
+       76:  350:bool world_is_shadowed(const world_t *w, const tuple_t light_position,
+        -:  351:                       const tuple_t p)
+        -:  352:{
+       76:  353:    if (w == NULL)
+        -:  354:    {
+    #####:  355:        return false;
+        -:  356:    }
+        -:  357:
+       76:  358:    tuple_t v         = tuple_subtract(light_position, p);
+       76:  359:    double distance   = tuple_magnitude(v);
+       76:  360:    tuple_t direction = tuple_normalize(v);
+        -:  361:
+       76:  362:    if (distance < EPSILON)
+        -:  363:    {
+    #####:  364:        return false;
+        -:  365:    }
+        -:  366:
+       76:  367:    tuple_t offset_point = tuple_add(p, tuple_scale(direction, EPSILON));
+       76:  368:    ray_t r              = ray(offset_point, direction);
+        -:  369:
+       76:  370:    intersections_t xs;
+        -:  371:
+       76:  372:    world_intersect(w, &r, &xs);
+        -:  373:
+       76:  374:    intersection_t *h = intersections_hit(&xs);
+        -:  375:
+       76:  376:    if (h != NULL && h->t < distance)
+        -:  377:    {
+       29:  378:        shape_t *hit_shape = (shape_t *)h->object;
+       29:  379:        return hit_shape->material.casts_shadow;
+       29:  380:    }
+        -:  381:
+       47:  382:    return false;
+       76:  383:}
+        -:  384:
+       26:  385:tuple_t world_reflected_color(const world_t *w, const computations_t *c,
+        -:  386:                              const unsigned remaining)
+        -:  387:{
+       26:  388:    if (w == NULL || c == NULL)
+        -:  389:    {
+    #####:  390:        return color(0, 0, 0);
+        -:  391:    }
+        -:  392:
+       26:  393:    shape_t *o = (shape_t *)c->object;
+        -:  394:
+       26:  395:    if (remaining == 0 || o->material.reflective < MIN_RAY_CONTRIBUTION)
+        -:  396:    {
+       17:  397:        return color(0, 0, 0);
+        -:  398:    }
+        -:  399:
+        9:  400:    ray_t reflect_ray = ray(c->over_point, c->reflectv);
+        9:  401:    tuple_t color     = world_color_at(w, &reflect_ray, remaining - 1);
+        -:  402:
+        9:  403:    return tuple_scale(color, o->material.reflective);
+       26:  404:}
+        -:  405:
+       28:  406:tuple_t world_refracted_color(const world_t *w, const computations_t *c,
+        -:  407:                              const unsigned remaining)
+        -:  408:{
+       28:  409:    if (w == NULL || c == NULL)
+        -:  410:    {
+    #####:  411:        return color(0, 0, 0);
+        -:  412:    }
+        -:  413:
+       28:  414:    shape_t *o = (shape_t *)c->object;
+        -:  415:
+       28:  416:    double n_ratio = c->n1 / c->n2;
+       28:  417:    double cos_i   = tuple_dot(c->eyev, c->normalv);
+       28:  418:    double sin2_t  = (n_ratio * n_ratio) * (1 - cos_i * cos_i);
+        -:  419:
+       28:  420:    if (remaining == 0 || o->material.transparency < MIN_RAY_CONTRIBUTION ||
+        2:  421:        sin2_t > 1)
+        -:  422:    {
+       26:  423:        return color(0, 0, 0);
+        -:  424:    }
+        -:  425:
+        2:  426:    double cos_t = sqrt(1.0 - sin2_t);
+        2:  427:    tuple_t direction =
+        4:  428:        tuple_subtract(tuple_scale(c->normalv, n_ratio * cos_i - cos_t),
+        2:  429:                       tuple_scale(c->eyev, n_ratio));
+        -:  430:
+        2:  431:    ray_t refract_ray = ray(c->under_point, direction);
+        -:  432:
+        4:  433:    return tuple_scale(world_color_at(w, &refract_ray, remaining - 1),
+        2:  434:                       o->material.transparency);
+       28:  435:}

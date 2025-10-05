@@ -1,0 +1,391 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/src/obj_parser.c
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/obj_parser.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/obj_parser.c.gcda
+        -:    0:Runs:1
+        -:    1:#include "../include/obj_parser.h"
+        -:    2:#include <stdbool.h>
+        -:    3:#include <stdlib.h>
+        -:    4:#include <string.h>
+        -:    5:
+        2:    6:static void smooth_fan_triangulation(group_t *group, int vertex_indices[],
+        -:    7:                                     int normal_indices[], int vertex_count,
+        -:    8:                                     obj_parser_t *parser)
+        -:    9:{
+        2:   10:    if (group == NULL || vertex_indices == NULL || normal_indices == NULL ||
+        2:   11:        parser == NULL || vertex_count < 3)
+        -:   12:    {
+    #####:   13:        return;
+        -:   14:    }
+        -:   15:
+        4:   16:    for (int index = 1; index < vertex_count - 1; index++)
+        -:   17:    {
+        2:   18:        if (vertex_indices[0] < 1 ||
+        2:   19:            vertex_indices[0] > (int)parser->vertex_count ||
+        2:   20:            vertex_indices[index] < 1 ||
+        2:   21:            vertex_indices[index] > (int)parser->vertex_count ||
+        2:   22:            vertex_indices[index + 1] < 1 ||
+        2:   23:            vertex_indices[index + 1] > (int)parser->vertex_count)
+        -:   24:        {
+    #####:   25:            continue;
+        -:   26:        }
+        -:   27:
+        2:   28:        if (normal_indices[0] < 1 ||
+        2:   29:            normal_indices[0] > (int)parser->normal_count ||
+        2:   30:            normal_indices[index] < 1 ||
+        2:   31:            normal_indices[index] > (int)parser->normal_count ||
+        2:   32:            normal_indices[index + 1] < 1 ||
+        2:   33:            normal_indices[index + 1] > (int)parser->normal_count)
+        -:   34:        {
+    #####:   35:            continue;
+        -:   36:        }
+        -:   37:
+        2:   38:        tuple_t p1 = parser->vertices[vertex_indices[0]];
+        2:   39:        tuple_t p2 = parser->vertices[vertex_indices[index]];
+        2:   40:        tuple_t p3 = parser->vertices[vertex_indices[index + 1]];
+        -:   41:
+        2:   42:        tuple_t n1 = parser->normals[normal_indices[0]];
+        2:   43:        tuple_t n2 = parser->normals[normal_indices[index]];
+        2:   44:        tuple_t n3 = parser->normals[normal_indices[index + 1]];
+        -:   45:
+        2:   46:        smooth_triangle_t *t = malloc(sizeof(smooth_triangle_t));
+        2:   47:        if (t == NULL)
+        -:   48:        {
+    #####:   49:            printf("ERROR: Failed to allocate memory for smooth triangle\n");
+    #####:   50:            continue;
+        -:   51:        }
+        2:   52:        *t = smooth_triangle(p1, p2, p3, n1, n2, n3);
+        -:   53:
+        2:   54:        unsigned old_count = group->child_count;
+        2:   55:        group_add_child(group, (shape_t *)t);
+        2:   56:        if (group->child_count == old_count)
+        -:   57:        {
+    #####:   58:            printf("ERROR: Failed to add smooth triangle to group (capacity "
+        -:   59:                   "exceeded)\n");
+    #####:   60:            free(t);
+    #####:   61:            continue;
+        -:   62:        }
+        2:   63:    }
+        2:   64:}
+        -:   65:
+        7:   66:static void fan_triangulation(group_t *group, tuple_t vertices[],
+        -:   67:                              int vertex_count)
+        -:   68:{
+        7:   69:    if (group == NULL || vertices == NULL || vertex_count < 3)
+        -:   70:    {
+    #####:   71:        return;
+        -:   72:    }
+        -:   73:
+       16:   74:    for (int index = 1; index < vertex_count - 1; index++)
+        -:   75:    {
+        9:   76:        triangle_t *t = malloc(sizeof(triangle_t));
+        9:   77:        if (t == NULL)
+        -:   78:        {
+    #####:   79:            printf("ERROR: Failed to allocate memory for triangle\n");
+    #####:   80:            continue;
+        -:   81:        }
+        9:   82:        *t = triangle(vertices[0], vertices[index], vertices[index + 1]);
+        -:   83:
+        9:   84:        unsigned old_count = group->child_count;
+        9:   85:        group_add_child(group, (shape_t *)t);
+        9:   86:        if (group->child_count == old_count)
+        -:   87:        {
+    #####:   88:            printf(
+        -:   89:                "ERROR: Failed to add triangle to group (capacity exceeded)\n");
+    #####:   90:            free(t);
+    #####:   91:            continue;
+        -:   92:        }
+        9:   93:    }
+        7:   94:}
+        -:   95:
+        6:   96:static void parse_vertex_normal(obj_parser_t *parser, const char *line)
+        -:   97:{
+        6:   98:    if (parser == NULL || line == NULL)
+        -:   99:    {
+    #####:  100:        return;
+        -:  101:    }
+        -:  102:
+        6:  103:    double x, y, z;
+        6:  104:    if (sscanf(line + 3, "%lf %lf %lf", &x, &y, &z) == 3)
+        -:  105:    {
+        6:  106:        if (parser->normal_count < MAX_NORMALS)
+        -:  107:        {
+        6:  108:            parser->normal_count++;
+        6:  109:            parser->normals[parser->normal_count] = vector(x, y, z);
+        6:  110:        }
+        -:  111:        else
+        -:  112:        {
+    #####:  113:            parser->ignored_lines++;
+        -:  114:        }
+        6:  115:    }
+        -:  116:    else
+        -:  117:    {
+    #####:  118:        parser->ignored_lines++;
+        -:  119:    }
+        6:  120:}
+        -:  121:
+       24:  122:static void parse_vertex(obj_parser_t *parser, const char *line)
+        -:  123:{
+       24:  124:    if (parser == NULL || line == NULL)
+        -:  125:    {
+    #####:  126:        return;
+        -:  127:    }
+        -:  128:
+       24:  129:    double x, y, z;
+       24:  130:    if (sscanf(line + 2, "%lf %lf %lf", &x, &y, &z) == 3)
+        -:  131:    {
+       24:  132:        if (parser->vertex_count < MAX_VERTICES)
+        -:  133:        {
+       24:  134:            parser->vertex_count++;
+       24:  135:            parser->vertices[parser->vertex_count] = point(x, y, z);
+       24:  136:        }
+        -:  137:        else
+        -:  138:        {
+    #####:  139:            parser->ignored_lines++;
+        -:  140:        }
+       24:  141:    }
+        -:  142:    else
+        -:  143:    {
+    #####:  144:        parser->ignored_lines++;
+        -:  145:    }
+       24:  146:}
+        -:  147:
+        9:  148:static void parse_face(obj_parser_t *parser, const char *line)
+        -:  149:{
+        9:  150:    if (parser == NULL || line == NULL)
+        -:  151:    {
+    #####:  152:        return;
+        -:  153:    }
+        -:  154:
+        9:  155:    int face_vertices[MAX_FACE_VERTICES];
+        9:  156:    int face_normals[MAX_FACE_VERTICES];
+        9:  157:    int vertex_count = 0;
+        9:  158:    bool has_normals = false;
+        9:  159:    char *line_ptr   = (char *)line + 2;
+        9:  160:    char *token;
+        -:  161:
+        9:  162:    char line_copy[256];
+        9:  163:    strncpy(line_copy, line_ptr, sizeof(line_copy) - 1);
+        9:  164:    line_copy[sizeof(line_copy) - 1] = '\0';
+        -:  165:
+        9:  166:    char *line_work = line_copy;
+       67:  167:    while ((token = strtok(vertex_count == 0 ? line_work : NULL, " ")) !=
+       38:  168:               NULL &&
+       29:  169:           vertex_count < MAX_FACE_VERTICES)
+        -:  170:    {
+       29:  171:        int vertex_index = 0;
+       29:  172:        int normal_index = 0;
+        -:  173:
+       29:  174:        char token_copy[64];
+       29:  175:        strncpy(token_copy, token, sizeof(token_copy) - 1);
+       29:  176:        token_copy[sizeof(token_copy) - 1] = '\0';
+        -:  177:
+       29:  178:        char *slash1 = strchr(token_copy, '/');
+       29:  179:        if (slash1 == NULL)
+        -:  180:        {
+       23:  181:            vertex_index = atoi(token_copy);
+       23:  182:        }
+        -:  183:        else
+        -:  184:        {
+        6:  185:            *slash1      = '\0';
+        6:  186:            vertex_index = atoi(token_copy);
+        -:  187:
+        6:  188:            char *slash2 = strchr(slash1 + 1, '/');
+        6:  189:            if (slash2 != NULL)
+        -:  190:            {
+        6:  191:                normal_index = atoi(slash2 + 1);
+        6:  192:                if (normal_index > 0)
+        -:  193:                {
+        6:  194:                    has_normals = true;
+        6:  195:                }
+        6:  196:            }
+        6:  197:        }
+        -:  198:
+       29:  199:        if (vertex_index > 0 && vertex_index <= (int)parser->vertex_count)
+        -:  200:        {
+       29:  201:            face_vertices[vertex_count] = vertex_index;
+       29:  202:            face_normals[vertex_count]  = normal_index;
+       29:  203:            vertex_count++;
+       29:  204:        }
+        -:  205:        else
+        -:  206:        {
+    #####:  207:            vertex_count = 0;
+    #####:  208:            break;
+        -:  209:        }
+       29:  210:    }
+        -:  211:
+        9:  212:    if (vertex_count >= 3)
+        -:  213:    {
+        9:  214:        if (has_normals)
+        -:  215:        {
+        4:  216:            smooth_fan_triangulation(parser->current_group, face_vertices,
+        2:  217:                                     face_normals, vertex_count, parser);
+        2:  218:        }
+        -:  219:        else
+        -:  220:        {
+        7:  221:            tuple_t face_points[MAX_FACE_VERTICES];
+       30:  222:            for (int i = 0; i < vertex_count; i++)
+        -:  223:            {
+       23:  224:                face_points[i] = parser->vertices[face_vertices[i]];
+       23:  225:            }
+        7:  226:            fan_triangulation(parser->current_group, face_points, vertex_count);
+        7:  227:        }
+        9:  228:    }
+        -:  229:    else
+        -:  230:    {
+    #####:  231:        parser->ignored_lines++;
+        -:  232:    }
+        9:  233:}
+        -:  234:
+        4:  235:static void parse_group(obj_parser_t *parser, const char *line)
+        -:  236:{
+        4:  237:    if (parser == NULL || line == NULL)
+        -:  238:    {
+    #####:  239:        return;
+        -:  240:    }
+        -:  241:
+        4:  242:    char group_name[MAX_GROUP_NAME];
+        4:  243:    if (sscanf(line + 2, "%63s", group_name) == 1)
+        -:  244:    {
+        4:  245:        group_t *found_group = NULL;
+        6:  246:        for (unsigned i = 0; i < parser->group_count; i++)
+        -:  247:        {
+        2:  248:            if (strcmp(parser->named_groups[i].name, group_name) == 0)
+        -:  249:            {
+    #####:  250:                found_group = parser->named_groups[i].group;
+    #####:  251:                break;
+        -:  252:            }
+        2:  253:        }
+        -:  254:
+        4:  255:        if (found_group == NULL && parser->group_count < MAX_GROUPS)
+        -:  256:        {
+        4:  257:            group_t *new_group = group();
+        4:  258:            if (new_group != NULL)
+        -:  259:            {
+        4:  260:                strncpy(parser->named_groups[parser->group_count].name,
+        -:  261:                        group_name, MAX_GROUP_NAME - 1);
+        8:  262:                parser->named_groups[parser->group_count]
+        8:  263:                    .name[MAX_GROUP_NAME - 1]                   = '\0';
+        4:  264:                parser->named_groups[parser->group_count].group = new_group;
+        4:  265:                found_group                                     = new_group;
+        4:  266:                parser->group_count++;
+        4:  267:            }
+        4:  268:        }
+        -:  269:
+        4:  270:        if (found_group != NULL)
+        -:  271:        {
+        4:  272:            parser->current_group = found_group;
+        4:  273:        }
+        -:  274:        else
+        -:  275:        {
+    #####:  276:            parser->ignored_lines++;
+        -:  277:        }
+        4:  278:    }
+        -:  279:    else
+        -:  280:    {
+    #####:  281:        parser->ignored_lines++;
+        -:  282:    }
+        4:  283:}
+        -:  284:
+        8:  285:obj_parser_t obj_parse_file(FILE *file)
+        -:  286:{
+        8:  287:    obj_parser_t parser = {0};
+        -:  288:
+        8:  289:    if (file == NULL)
+        -:  290:    {
+    #####:  291:        parser.has_error = true;
+    #####:  292:        return parser;
+        -:  293:    }
+        -:  294:
+        8:  295:    parser.default_group = group();
+        8:  296:    if (parser.default_group == NULL)
+        -:  297:    {
+    #####:  298:        parser.has_error = true;
+    #####:  299:        return parser;
+        -:  300:    }
+        8:  301:    parser.current_group = parser.default_group;
+        8:  302:    parser.has_error     = false;
+        8:  303:    char line[256];
+        -:  304:
+       60:  305:    while (fgets(line, sizeof(line), file) != NULL)
+        -:  306:    {
+       52:  307:        line[sizeof(line) - 1]    = '\0';
+       52:  308:        line[strcspn(line, "\n")] = 0;
+        -:  309:
+       52:  310:        if (line[0] == 'v' && line[1] == 'n' && line[2] == ' ')
+        -:  311:        {
+        6:  312:            parse_vertex_normal(&parser, line);
+        6:  313:        }
+       46:  314:        else if (line[0] == 'v' && line[1] == ' ')
+        -:  315:        {
+       24:  316:            parse_vertex(&parser, line);
+       24:  317:        }
+       22:  318:        else if (line[0] == 'f' && line[1] == ' ')
+        -:  319:        {
+        9:  320:            parse_face(&parser, line);
+        9:  321:        }
+       13:  322:        else if (line[0] == 'g' && line[1] == ' ')
+        -:  323:        {
+        4:  324:            parse_group(&parser, line);
+        4:  325:        }
+        -:  326:        else
+        -:  327:        {
+        9:  328:            parser.ignored_lines++;
+        -:  329:        }
+        -:  330:    }
+        -:  331:
+        -:  332:    return parser;
+        8:  333:}
+        -:  334:
+        4:  335:group_t *obj_parser_get_group(obj_parser_t *parser, const char *name)
+        -:  336:{
+        4:  337:    if (parser == NULL || name == NULL)
+        -:  338:    {
+    #####:  339:        return NULL;
+        -:  340:    }
+        -:  341:
+       10:  342:    for (unsigned i = 0; i < parser->group_count; i++)
+        -:  343:    {
+        6:  344:        if (strcmp(parser->named_groups[i].name, name) == 0)
+        -:  345:        {
+        4:  346:            return parser->named_groups[i].group;
+        -:  347:        }
+        2:  348:    }
+    #####:  349:    return NULL;
+        4:  350:}
+        -:  351:
+        4:  352:group_t *obj_parser_get_default_group(obj_parser_t *parser)
+        -:  353:{
+        4:  354:    if (parser == NULL)
+        -:  355:    {
+    #####:  356:        return NULL;
+        -:  357:    }
+        4:  358:    return parser->default_group;
+        4:  359:}
+        -:  360:
+    #####:  361:bool obj_parser_has_error(const obj_parser_t *parser)
+        -:  362:{
+    #####:  363:    return parser != NULL && parser->has_error;
+        -:  364:}
+        -:  365:
+        8:  366:void obj_parser_free(obj_parser_t *parser)
+        -:  367:{
+        8:  368:    if (parser == NULL)
+    #####:  369:        return;
+        -:  370:
+        8:  371:    if (parser->default_group != NULL)
+        -:  372:    {
+        8:  373:        group_free(parser->default_group);
+        8:  374:        parser->default_group = NULL;
+        8:  375:    }
+        -:  376:
+       12:  377:    for (unsigned int i = 0; i < parser->group_count; i++)
+        -:  378:    {
+        4:  379:        if (parser->named_groups[i].group != NULL)
+        -:  380:        {
+        4:  381:            group_free(parser->named_groups[i].group);
+        4:  382:            parser->named_groups[i].group = NULL;
+        4:  383:        }
+        4:  384:    }
+        8:  385:    parser->group_count = 0;
+        8:  386:    parser->has_error   = false;
+        8:  387:}

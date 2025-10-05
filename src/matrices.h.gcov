@@ -1,0 +1,89 @@
+        -:    0:Source:/Users/standard/Desktop/Projects/raytracer/raytracer/include/matrices.h
+        -:    0:Graph:../build/CMakeFiles/main_lib.dir/src/transformations.c.gcno
+        -:    0:Data:../build/CMakeFiles/main_lib.dir/src/transformations.c.gcda
+        -:    0:Runs:1
+        -:    1:// matrices.h
+        -:    2:
+        -:    3:#include "../include/tuples.h"
+        -:    4:#include <stdbool.h>
+        -:    5:
+        -:    6:#ifndef MATRICES_H
+        -:    7:#define MATRICES_H
+        -:    8:
+        -:    9:typedef struct
+        -:   10:{
+        -:   11:    double m[16];
+        -:   12:} matrix_t;
+        -:   13:
+        -:   14:extern const matrix_t IDENTITY;
+        -:   15:
+        5:   16:static inline matrix_t matrix_mul(const matrix_t a, const matrix_t b)
+        -:   17:{
+        -:   18:    matrix_t output;
+        -:   19:
+        -:   20:    // Row 0
+        5:   21:    output.m[0] =
+        5:   22:        a.m[0] * b.m[0] + a.m[1] * b.m[4] + a.m[2] * b.m[8] + a.m[3] * b.m[12];
+        5:   23:    output.m[1] =
+        5:   24:        a.m[0] * b.m[1] + a.m[1] * b.m[5] + a.m[2] * b.m[9] + a.m[3] * b.m[13];
+        5:   25:    output.m[2] =
+        5:   26:        a.m[0] * b.m[2] + a.m[1] * b.m[6] + a.m[2] * b.m[10] + a.m[3] * b.m[14];
+        5:   27:    output.m[3] =
+        5:   28:        a.m[0] * b.m[3] + a.m[1] * b.m[7] + a.m[2] * b.m[11] + a.m[3] * b.m[15];
+        -:   29:
+        -:   30:    // Row 1
+        5:   31:    output.m[4] =
+        5:   32:        a.m[4] * b.m[0] + a.m[5] * b.m[4] + a.m[6] * b.m[8] + a.m[7] * b.m[12];
+        5:   33:    output.m[5] =
+        5:   34:        a.m[4] * b.m[1] + a.m[5] * b.m[5] + a.m[6] * b.m[9] + a.m[7] * b.m[13];
+        5:   35:    output.m[6] =
+        5:   36:        a.m[4] * b.m[2] + a.m[5] * b.m[6] + a.m[6] * b.m[10] + a.m[7] * b.m[14];
+        5:   37:    output.m[7] =
+        5:   38:        a.m[4] * b.m[3] + a.m[5] * b.m[7] + a.m[6] * b.m[11] + a.m[7] * b.m[15];
+        -:   39:
+        -:   40:    // Row 2
+       10:   41:    output.m[8] = a.m[8] * b.m[0] + a.m[9] * b.m[4] + a.m[10] * b.m[8] +
+        5:   42:                  a.m[11] * b.m[12];
+       10:   43:    output.m[9] = a.m[8] * b.m[1] + a.m[9] * b.m[5] + a.m[10] * b.m[9] +
+        5:   44:                  a.m[11] * b.m[13];
+       10:   45:    output.m[10] = a.m[8] * b.m[2] + a.m[9] * b.m[6] + a.m[10] * b.m[10] +
+        5:   46:                   a.m[11] * b.m[14];
+       10:   47:    output.m[11] = a.m[8] * b.m[3] + a.m[9] * b.m[7] + a.m[10] * b.m[11] +
+        5:   48:                   a.m[11] * b.m[15];
+        -:   49:
+        -:   50:    // Row 3
+       10:   51:    output.m[12] = a.m[12] * b.m[0] + a.m[13] * b.m[4] + a.m[14] * b.m[8] +
+        5:   52:                   a.m[15] * b.m[12];
+       10:   53:    output.m[13] = a.m[12] * b.m[1] + a.m[13] * b.m[5] + a.m[14] * b.m[9] +
+        5:   54:                   a.m[15] * b.m[13];
+       10:   55:    output.m[14] = a.m[12] * b.m[2] + a.m[13] * b.m[6] + a.m[14] * b.m[10] +
+        5:   56:                   a.m[15] * b.m[14];
+       10:   57:    output.m[15] = a.m[12] * b.m[3] + a.m[13] * b.m[7] + a.m[14] * b.m[11] +
+        5:   58:                   a.m[15] * b.m[15];
+        -:   59:
+        5:   60:    return output;
+        -:   61:}
+        -:   62:
+        -:   63:static inline tuple_t matrix_tmul(const matrix_t a, const tuple_t b)
+        -:   64:{
+        -:   65:    tuple_t output;
+        -:   66:
+        -:   67:    output.x = a.m[0] * b.x + a.m[1] * b.y + a.m[2] * b.z + a.m[3] * b.w;
+        -:   68:    output.y = a.m[4] * b.x + a.m[5] * b.y + a.m[6] * b.z + a.m[7] * b.w;
+        -:   69:    output.z = a.m[8] * b.x + a.m[9] * b.y + a.m[10] * b.z + a.m[11] * b.w;
+        -:   70:    output.w = a.m[12] * b.x + a.m[13] * b.y + a.m[14] * b.z + a.m[15] * b.w;
+        -:   71:
+        -:   72:    return output;
+        -:   73:}
+        -:   74:
+        -:   75:matrix_t matrix_transpose(const matrix_t a);
+        -:   76:
+        -:   77:double matrix_determinant(const matrix_t a);
+        -:   78:
+        -:   79:bool matrix_invertible(const matrix_t a);
+        -:   80:
+        -:   81:matrix_t matrix_inverse(const matrix_t a);
+        -:   82:
+        -:   83:bool matrix_equal(matrix_t a, matrix_t b);
+        -:   84:
+        -:   85:#endif
